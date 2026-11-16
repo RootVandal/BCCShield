@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BCC Shield (демо)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <style>
+    .hero-title { font-size: clamp(20px, 2vw, 24px); line-height: 1.28; font-weight: 400; letter-spacing: -0.02em; color: #e9e7e1; }
+    .role { width: 100%; height: 42px; border-radius: 10px; display: flex; align-items: center; gap: 12px; padding: 0 16px;
+      font-size: 13.5px; text-decoration: none; transition: background .15s, border-color .15s, transform .05s; }
+    .role:active { transform: scale(.99); }
+    .role.primary { background: var(--pale); color: var(--ink); justify-content: center; }
+    .role.primary:hover { background: var(--pale-hover); }
+    .role.secondary { background: rgba(26,26,24,.72); border: 1px solid var(--line-strong); color: var(--text); backdrop-filter: blur(8px); }
+    .role.secondary:hover { background: rgba(35,35,32,.85); }
+    .role .k { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .role.primary .k { color: #6b6962; }
+    .role svg.arr { width: 14px; height: 14px; opacity: .6; }
+  </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+  <canvas class="sand" id="sand" aria-hidden="true"></canvas>
+  <div class="vignette"></div>
+
+  <main class="relative z-10 min-h-screen flex flex-col items-center justify-center px-4">
+    <div class="w-full max-w-[380px] flex flex-col items-center text-center">
+      <canvas id="logo" class="grain-logo" aria-label="BCC Shield"></canvas>
+      <h1 class="hero-title mt-5">Защита от мошенников,<br>которые звонят «из&nbsp;банка»</h1>
+
+      <nav class="w-full max-w-[300px] mt-7 flex flex-col gap-2.5" aria-label="Роли демо">
+        <a class="role primary" href="/client" target="_blank" rel="noopener">
+          <span class="dot"></span>
+          <span>Открыть как клиент · Сауле</span>
+        </a>
+        <a class="role secondary" href="/relative" target="_blank" rel="noopener">
+          <span>Родственник · Айдар</span><span class="k">сын</span>
+          <svg class="arr" viewBox="0 0 16 16" fill="none"><path d="M5 11 11 5M6 5h5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </a>
+        <a class="role secondary" href="/analyst" target="_blank" rel="noopener">
+          <span>Аналитик антифрода</span><span class="k">граф</span>
+          <svg class="arr" viewBox="0 0 16 16" fill="none"><path d="M5 11 11 5M6 5h5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </a>
+      </nav>
+
+      <p class="mt-5 text-[11px] leading-[1.55] faint max-w-[290px]">
+        Откройте три вкладки рядом и пройдите сценарий. <span class="link muted" id="reset" role="button" tabindex="0">Сбросить демо</span>
+        · <a class="link muted" href="/docs" target="_blank">API</a>. Демо для ITU Hackathon 2026, не продукт банка.
+      </p>
+    </div>
+  </main>
+  <div id="status" class="fixed z-10 left-4 bottom-4 mono text-[10.5px] faint flex flex-wrap gap-x-4 gap-y-1"></div>
+  <div class="fixed z-10 right-4 bottom-4 mono text-[10.5px] faint">BCC Shield (демо)</div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/sand.js"></script>
+  <script>
+    document.querySelector(".role.primary .dot").innerHTML = SHIELD_DOT;
+    startSand(document.getElementById("sand"));
+    startGrainLogo(document.getElementById("logo"), { size: 96 });
+    api("/api/config").then((c) => {
+      const chip = (on, a, b) => `<span>${on ? "●" : "○"} ${on ? a : b}</span>`;
+      $("#status").innerHTML = chip(c.llm_enabled, "LLM + речь", "ключевые слова") +
+        chip(c.telegram_enabled, "Telegram", "веб-родственник") + `<span>охлаждение ${c.cooling_seconds} с</span>`;
+    });
+    const reset = async () => {
+      const el = $("#reset"); el.textContent = "сбрасываем…";
+      try { await api("/api/demo/reset", { body: {} }); el.textContent = "демо сброшено"; }
+      catch (e) { el.textContent = "ошибка: " + e.message; }
+      setTimeout(() => (el.textContent = "Сбросить демо"), 2500);
+    };
+    $("#reset").addEventListener("click", reset);
+    $("#reset").addEventListener("keydown", (e) => e.key === "Enter" && reset());
+  </script>
+</body>
+</html>

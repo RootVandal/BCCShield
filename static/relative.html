@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Родственник · BCC Shield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <style>
+    .side-note { width: 300px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    @media (max-width: 1100px) { .side-note { display: none; } }
+    .req { border-radius: 18px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+    .req.pending { border-color: rgba(242,179,61,.45); box-shadow: 0 0 0 4px rgba(242,179,61,.06); }
+    .alert-card { border-radius: 18px; padding: 16px; background: linear-gradient(180deg, #3a0f0a, #24100d); border: 1px solid rgba(255,92,77,.45); }
+  </style>
+</head>
+<body>
+  <canvas class="sand" id="sand" aria-hidden="true" style="opacity:.7"></canvas>
+  <div class="phone-stage">
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div class="phone-status"><span class="num" id="clock">9:41</span><span class="flex items-center gap-1.5 text-[12px]"><span id="ws-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-[color:var(--faint)]"></span>LTE</span></div>
+      <div class="phone-body px-4 pb-8" id="body">
+        <div class="flex items-center justify-between pt-1 pb-4">
+          <div class="flex items-center gap-3"><div class="app-icon sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div>
+            <div><div class="text-[12px] muted">Семейный щит</div><div class="text-[15px] font-semibold">Айдар</div></div></div>
+          <span class="pill neutral" id="tg"></span>
+        </div>
+        <div id="mom" class="card p-4"></div>
+        <div id="alerts" class="flex flex-col gap-3 mt-3"></div>
+        <div class="flex items-center justify-between mt-6 mb-2"><h3 class="text-[15px] font-semibold">Запросы на подтверждение</h3><span class="text-[12px] muted" id="count"></span></div>
+        <div id="requests" class="flex flex-col gap-3"></div>
+      </div>
+    </div>
+    <aside class="side-note">
+      <div class="text-[13px] text-[color:var(--text)] mb-3">Экран доверенного лица</div>
+      <p>Сюда приходят тревоги «маме звонят мошенники» и рискованные переводы. Пока Айдар не решит, деньги не списываются. Если ответа нет, перевод выполнится после периода охлаждения.</p>
+      <p class="mt-3">Если задан <span class="mono text-[12px]">TELEGRAM_BOT_TOKEN</span>, такие же сообщения с кнопками приходят в Telegram.</p>
+      <p class="mt-4 text-[12px]"><a class="link" href="/client" target="_blank">Клиент ↗</a> &nbsp; <a class="link" href="/analyst" target="_blank">Аналитик ↗</a></p>
+    </aside>
+  </div>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/sand.js"></script>
+  <script>
+    const R = { client: null, transfers: [], alerts: [], call: null, shieldOff: null, cfg: {} };
+
+    function renderMom() {
+      const c = R.client; if (!c) return;
+      const call = R.call;
+      $("#mom").innerHTML = `<div class="flex items-center gap-3"><div class="avatar w-10 h-10 rounded-full grid place-items-center text-[13px] font-semibold" style="background:var(--accent-dim);color:var(--accent)">СА</div>
+        <div class="flex-1"><div class="text-[14px] font-medium">Мама · ${esc(c.name)}</div><div class="text-[12px] muted">${c.age} лет · ${esc(c.phone)}</div></div>
+        <a class="btn btn-sm" href="tel:${esc(c.phone)}">📞</a></div>
+        <div class="grid grid-cols-3 gap-2 mt-4 text-[12px]">
+          <div class="card-2 p-2.5"><div class="muted">Щит</div><div class="mt-0.5 ${c.shield_enabled ? "text-[color:var(--accent)]" : ""}">${c.shield_enabled ? "включён" : "выключен"}</div></div>
+          <div class="card-2 p-2.5"><div class="muted">Защита</div><div class="mt-0.5 ${c.protection_mode === "on" ? "text-[color:var(--danger)]" : ""}">${c.protection_mode === "on" ? "режим ON" : "обычный"}</div></div>
+          <div class="card-2 p-2.5"><div class="muted">Звонок</div><div class="mt-0.5 num" style="color:${call ? riskColor(call.risk) : "var(--muted)"}">${call ? "риск " + pct(call.risk) : "нет"}</div></div></div>
+        ${call ? `<div class="mt-3">${sparkSVG(call.history.map((h) => h.score), 320, 36)}</div>` : ""}
+        ${R.shieldOff ? `<div class="mt-3 card-2 p-3 text-[12.5px]" style="border-color:rgba(242,179,61,.4)">Мама хочет отключить семейный щит.
+          <div class="grid grid-cols-2 gap-2 mt-2"><button class="btn btn-sm" onclick="R.shieldOff=null;renderMom()">Не разрешать</button><button class="btn btn-sm btn-pale" onclick="confirmShieldOff()">Разрешить</button></div></div>` : ""}`;
+    }
+
+    function renderAlerts() {
+      $("#alerts").innerHTML = R.alerts.slice().reverse().slice(0, 2).map((a) => `<div class="alert-card fade-in" role="alert">
+        <div class="flex items-start gap-3"><div class="text-[22px] leading-none">⚠️</div><div class="flex-1">
+          <div class="text-[15px] font-semibold text-white leading-snug">Маме (${esc(a.client.split(" ")[0])}) сейчас звонят мошенники</div>
+          <div class="text-[13px] text-white/75 mt-1">Схема: ${esc(a.scheme.ru)} · риск ${pct(a.risk)} · ${timeHM(a.at)}</div>
+          <div class="text-[13px] text-white/75 mt-1">Позвоните ей прямо сейчас. Переводы мамы теперь требуют вашего подтверждения.</div></div></div>
+        <a class="btn btn-block mt-3" style="background:#fff;color:#7a1109;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить маме</a></div>`).join("");
+    }
+
+    function reqCard(t) {
+      const pending = t.status === "pending_relative" || t.status === "cooling";
+      const left = t.cooling_until ? Math.max(0, Math.round((new Date(t.cooling_until) - Date.now()) / 1000)) : 0;
+      return `<div class="req ${pending ? "pending" : ""} fade-in" data-id="${t.id}">
+        <div class="p-4">
+          <div class="flex justify-between items-start"><div><div class="text-[12px] muted">${esc(t.from.name)} переводит</div>
+            <div class="text-[26px] font-semibold num mt-0.5">${fmt(t.amount)}</div></div>${statusPill(t.status)}</div>
+          <div class="flex justify-between text-[13px] mt-3"><span class="muted">Получатель</span><span>${esc(t.to.bank)} ${esc(t.to.card)}${t.to.external ? ' <span class="muted">(другой банк)</span>' : ""}</span></div>
+          <div class="flex justify-between text-[13px] mt-1.5"><span class="muted">Риск</span>${levelPill(t.risk_level, t.risk_score)}</div>
+          ${pending ? `<div class="flex justify-between text-[13px] mt-1.5"><span class="muted">Без ответа выполнится через</span><span class="num mono cd" data-until="${t.cooling_until}">${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}</span></div>` : ""}
+          <div class="label mt-4 mb-1.5">Почему мы остановили перевод</div>
+          <ul class="text-[13px] flex flex-col gap-1">${t.reasons.slice(0, 6).map((r) => `<li class="flex gap-2"><span style="color:var(--danger)">•</span><span>${esc(r.ru)}</span></li>`).join("")}</ul>
+        </div>
+        ${pending ? `<div class="grid grid-cols-3 gap-px bg-[color:var(--line)] border-t hair">
+          <button class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px]" style="color:var(--accent)" onclick="decide(${t.id},'approve',this)">✅ Подтвердить</button>
+          <button class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px] font-semibold" style="color:var(--danger)" onclick="decide(${t.id},'reject',this)">❌ Отклонить</button>
+          <a class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px] grid place-items-center" href="tel:${esc(R.client?.phone || "")}">📞 Позвонить</a></div>`
+          : `<div class="px-4 py-3 border-t hair text-[12.5px] muted">${t.status === "rejected" ? "Вы отклонили перевод · деньги остались у мамы" : t.status === "completed" ? (t.decided_by === "cooling_expired" ? "Выполнен после охлаждения" : "Подтверждён") : ""}</div>`}
+      </div>`;
+    }
+
+    function renderRequests() {
+      const pend = R.transfers.filter((t) => t.status === "pending_relative" || t.status === "cooling").length;
+      $("#count").textContent = pend ? `${pend} ждут решения` : "";
+      $("#requests").innerHTML = R.transfers.map(reqCard).join("") ||
+        `<div class="card p-5 text-center text-[13px] muted">Пока всё спокойно. Если мама попробует сделать рискованный перевод, запрос придёт сюда.</div>`;
+    }
+
+    setInterval(() => {
+      document.querySelectorAll(".cd").forEach((el) => {
+        const left = Math.max(0, Math.round((new Date(el.dataset.until) - Date.now()) / 1000));
+        el.textContent = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
+      });
+      $("#clock").textContent = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    }, 1000);
+
+    async function decide(id, decision, btn) {
+      btn.disabled = true;
+      try { await api(`/api/transfers/${id}/decision`, { body: { decision, by: "relative_web" } }); }
+      catch (e) { alertInline(e.message); }
+      await load();
+    }
+    function alertInline(msg) { const d = document.createElement("div"); d.className = "toast"; d.innerHTML = `<div class="card px-4 py-3 text-[13px]">${esc(msg)}</div>`; document.querySelector(".phone").appendChild(d); setTimeout(() => d.remove(), 3500); }
+    async function confirmShieldOff() { await api(`/api/clients/${CLIENT_ID}/shield/confirm-off`, { body: {} }); R.shieldOff = null; await load(); }
+
+    async function load() {
+      const [inbox, calls] = await Promise.all([api(`/api/relative/${CLIENT_ID}/inbox`), api("/api/calls/active")]);
+      R.client = inbox.client; R.transfers = inbox.transfers; R.alerts = inbox.alerts;
+      R.call = calls.find((c) => c.client_id === CLIENT_ID) || null;
+      renderMom(); renderAlerts(); renderRequests();
+    }
+
+    connectWS((type, d) => {
+      if (type === "reset") return location.reload();
+      if (type === "relative_alert" && d.client_id === CLIENT_ID) { R.alerts.push(d); renderAlerts(); vibrate([400, 100, 400]); $("#body").scrollTop = 0; }
+      if (type === "call_update" && d.client_id === CLIENT_ID) { R.call = { risk: d.risk, history: d.history }; renderMom(); }
+      if (type === "call_ended" && d.client_id === CLIENT_ID) { R.call = null; renderMom(); }
+      if (type === "client_state" && d.id === CLIENT_ID) { R.client = d; renderMom(); }
+      if (type === "shield_off_request" && d.client_id === CLIENT_ID) { R.shieldOff = d; renderMom(); }
+      if (type === "transfer" && d.from.client_id === CLIENT_ID && d.risk_level === "high") { load(); if (d.status === "pending_relative") vibrate([300, 100, 300]); }
+    }, (ok) => ($("#ws-dot").style.background = ok ? "var(--accent)" : "var(--danger)"));
+
+    startSand(document.getElementById("sand"), { density: 0.8, alpha: 0.75 });
+    api("/api/config").then((c) => ($("#tg").textContent = c.telegram_enabled ? "Telegram ✓" : "веб-режим"));
+    load();
+  </script>
+</body>
+</html>

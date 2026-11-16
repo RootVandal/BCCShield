@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Клиент · BCC Shield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <style>
+    .bank-card { border-radius: 18px; padding: 18px; height: 168px; position: relative; overflow: hidden;
+      background: radial-gradient(120% 140% at 100% 0%, #1f7a49 0%, #0f3f26 45%, #0b2418 100%); border: 1px solid rgba(255,255,255,.08); }
+    .bank-card::after { content: ""; position: absolute; inset: 0; background: repeating-radial-gradient(circle at 85% 15%, rgba(255,255,255,.05) 0 1px, transparent 1px 9px); pointer-events: none; }
+    .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface);
+      border: 1px solid var(--line); text-align: left; cursor: pointer; transition: background .15s; position: relative; }
+    .tile:hover { background: var(--surface-2); }
+    .tile .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-3); }
+    .tile .ic svg { width: 18px; height: 18px; }
+    .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+    .seg button { height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; color: var(--muted); font-weight: 500; }
+    .seg button.on { background: var(--text); color: var(--ink); }
+    .row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .avatar { width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--surface-3); flex: none; }
+    .live { width: 8px; height: 8px; border-radius: 99px; background: var(--danger); box-shadow: 0 0 0 0 rgba(255,92,77,.6); animation: ring 1.4s infinite; }
+    .switch { width: 44px; height: 26px; border-radius: 99px; background: var(--surface-3); position: relative; transition: background .2s; flex: none; }
+    .switch::after { content: ""; position: absolute; width: 20px; height: 20px; top: 3px; left: 3px; border-radius: 99px; background: #fff; transition: transform .2s; }
+    .switch.on { background: var(--accent); } .switch.on::after { transform: translateX(18px); }
+    .yn { display: inline-flex; gap: 6px; } .yn button { height: 30px; min-width: 52px; border-radius: 8px; border: 1px solid var(--line-strong); font-size: 13px; color: var(--muted); }
+    .yn button.on-yes { background: var(--danger); color: #fff; border-color: transparent; } .yn button.on-no { background: var(--text); color: var(--ink); border-color: transparent; }
+    .side-note { width: 300px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .side-note ol { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+    .side-note li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 12px; }
+    .side-note li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 6px;
+      border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 11px; color: var(--text); font-family: "Geist Mono", monospace; }
+    @media (max-width: 1100px) { .side-note { display: none; } }
+  </style>
+</head>
+<body>
+  <canvas class="sand" id="sand" aria-hidden="true" style="opacity:.7"></canvas>
+  <div class="phone-stage">
+    <aside class="side-note" aria-label="Подсказка ведущему">
+      <div class="flex items-center gap-2 mb-5"><div class="app-icon sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div><span class="text-[13px] text-[color:var(--text)]">BCC Shield (демо) · экран клиента</span></div>
+      <ol>
+        <li><span class="text-[color:var(--text)]">Защита звонка</span> → «Включить» → сценарий «служба безопасности» (или микрофон).</li>
+        <li>Риск растёт: жёлтый баннер, затем красный экран. Родственник получает тревогу.</li>
+        <li><span class="text-[color:var(--text)]">Кредит</span> → 1 500 000 ₸.</li>
+        <li><span class="text-[color:var(--text)]">Перевод</span> → шаблон «Kaspi •• 4417 · 3 500 000 ₸».</li>
+        <li>Перевод уходит Айдару. Во вкладке родственника нажмите «Отклонить».</li>
+      </ol>
+      <p class="mt-6 text-[12px] faint">Контроль: сценарий «обычный звонок» и перевод сыну проходят без вмешательства.</p>
+      <p class="mt-4 text-[12px]"><a class="link" href="/relative" target="_blank">Родственник ↗</a> &nbsp; <a class="link" href="/analyst" target="_blank">Аналитик ↗</a></p>
+    </aside>
+    <div class="phone" id="phone">
+      <div class="phone-notch"></div>
+      <div class="phone-status"><span class="num" id="clock">9:41</span><span class="flex items-center gap-1.5 text-[12px]"><span id="ws-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-[color:var(--faint)]"></span><span>LTE</span></span></div>
+      <div class="phone-body" id="body"><div id="screen"></div></div>
+      <div id="overlay"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/sand.js"></script>
+  <script src="/static/js/client.js"></script>
+</body>
+</html>
