@@ -32,7 +32,7 @@ class TransferIn(BaseModel):
 
 class DecisionIn(BaseModel):
     decision: Literal["approve", "reject"]
-    by: str = "relative_web"
+    by: str = "relative_web"  # ignored: who decided is taken from the credentials, never from the body
 
 
 class CallStartIn(BaseModel):

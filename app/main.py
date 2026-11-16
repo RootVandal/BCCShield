@@ -4,7 +4,7 @@ import random
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect
@@ -16,6 +16,7 @@ from app.call_guard import analyzer, scenarios, stt
 from app.config import BASE_DIR, settings
 from app.db import SessionLocal, engine, get_db
 from app.family import service, telegram_bot
+from app.family.linking import ensure_strong_codes
 from app.graph import scoring
 from app.graph import service as graph_service
 from app.graph.generator import SIGNAL_CARD
@@ -23,6 +24,7 @@ from app.models import Account, CallSession, Client, Transfer, TrustedContact
 from app.risk.engine import find_or_create_recipient
 from app.schemas import (AnswerIn, CallStartIn, CallTextIn, DecisionIn, LanguageIn, LoanIn, ScenarioIn, ShieldIn,
                          SignalIn, SimulateSignalIn, TransferIn)
+from app.security import admin_key, admin_key_from_env, check_admin, is_relative, relative_key, require_relative
 from app.ws import hub
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -70,6 +72,16 @@ async def lifespan(app: FastAPI):
     if not inspect(engine).has_table("clients"):
         log.info("База пуста — создаю демо-данные")
         seed_mod.seed()
+    with SessionLocal() as db:
+        if ensure_strong_codes(db):
+            log.info("Коды привязки Telegram заменены на одноразовые")
+        tc = db.query(TrustedContact).filter_by(client_id=1).first()
+    base = settings.public_url or f"http://localhost:{settings.port}"
+    log.info("Ключ администратора демо%s: %s", " (из ADMIN_KEY)" if admin_key_from_env() else " (data/secrets.json)",
+             admin_key())
+    log.info("Аналитик с правами: %s/analyst?key=%s", base, admin_key())
+    if tc:
+        log.info("Ссылка доверенного лица: %s/relative?rk=%s", base, relative_key(tc.id))
     tasks = [asyncio.create_task(cooling_loop())]
     if settings.background_activity:
         tasks.append(asyncio.create_task(background_activity()))
@@ -115,11 +127,12 @@ def bad_request(e: Exception):
 @app.get("/api/config")
 def config():
     return {"llm_enabled": settings.llm_enabled, "stt_enabled": settings.llm_enabled,
-            "telegram_enabled": bool(settings.telegram_bot_token), "cooling_seconds": settings.cooling_seconds,
+            "telegram_enabled": telegram_bot.bot is not None, "telegram_bot_username": telegram_bot.bot_username,
+            "cooling_seconds": settings.cooling_seconds,
             "demo_client_id": 1}
 
 
-@app.post("/api/demo/reset")
+@app.post("/api/demo/reset", dependencies=[Depends(check_admin)])
 async def reset_demo():
     for t in scenario_tasks.values():
         t.cancel()
@@ -129,6 +142,25 @@ async def reset_demo():
     info = await asyncio.to_thread(seed_mod.seed)
     await hub.broadcast("reset", {})
     return info
+
+
+@app.get("/api/demo/links", dependencies=[Depends(check_admin)])
+def demo_links(db: Session = Depends(get_db)):
+    """Personal links for the presenter: shown on the start page only to admin / localhost."""
+    tc = db.query(TrustedContact).filter_by(client_id=1).first()
+    return {"relative": f"/relative?rk={relative_key(tc.id)}" if tc else "/relative",
+            "analyst": f"/analyst?key={admin_key()}"}
+
+
+def trusted_of(db: Session, client_id: int) -> TrustedContact | None:
+    return db.query(TrustedContact).filter_by(client_id=client_id).first()
+
+
+def relative_or_admin(request, db: Session, client_id: int, rk: str | None, ak: str | None):
+    tc = trusted_of(db, client_id)
+    if tc and is_relative(tc.id, rk):
+        return
+    check_admin(request, ak)
 
 
 @app.get("/api/metrics")
@@ -182,8 +214,12 @@ async def set_shield(client_id: int, body: ShieldIn, db: Session = Depends(get_d
 
 
 @app.post("/api/clients/{client_id}/shield/confirm-off")
-async def confirm_shield_off(client_id: int, db: Session = Depends(get_db)):
+async def confirm_shield_off(client_id: int, db: Session = Depends(get_db),
+                             x_relative_key: str | None = Header(default=None)):
+    """Only the trusted contact can switch the shield off (a scammer on the client's phone cannot)."""
     c = get_client(db, client_id)
+    tc = trusted_of(db, c.id)
+    require_relative(tc.id if tc else None, x_relative_key)
     c.shield_enabled, c.protection_mode = False, "off"
     db.commit()
     await service.push_client(db, c)
@@ -191,8 +227,11 @@ async def confirm_shield_off(client_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/clients/{client_id}/protection/off")
-async def protection_off(client_id: int, db: Session = Depends(get_db)):
+async def protection_off(client_id: int, request: Request, db: Session = Depends(get_db),
+                         x_relative_key: str | None = Header(default=None),
+                         x_admin_key: str | None = Header(default=None)):
     c = get_client(db, client_id)
+    relative_or_admin(request, db, c.id, x_relative_key, x_admin_key)
     c.protection_mode = "off"
     db.commit()
     await service.push_client(db, c)
@@ -248,15 +287,20 @@ def transfer_detail(transfer_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/transfers/{transfer_id}/decision")
-async def transfer_decision(transfer_id: int, body: DecisionIn, db: Session = Depends(get_db)):
+async def transfer_decision(transfer_id: int, body: DecisionIn, db: Session = Depends(get_db),
+                            x_relative_key: str | None = Header(default=None)):
+    """Approve / reject a paused transfer. Only the sender's trusted contact may do this."""
     t = db.get(Transfer, transfer_id) or bad_request(ValueError("Перевод не найден"))
+    src = db.get(Account, t.from_account_id)
+    tc = trusted_of(db, src.client_id) if src and src.client_id else None
+    require_relative(tc.id if tc else None, x_relative_key)
     try:
-        return await service.decide(db, t, body.decision, by=body.by)
+        return await service.decide(db, t, body.decision, by="relative_web")
     except ValueError as e:
         bad_request(e)
 
 
-@app.post("/api/transfers/{transfer_id}/false-positive")
+@app.post("/api/transfers/{transfer_id}/false-positive", dependencies=[Depends(check_admin)])
 async def false_positive(transfer_id: int, db: Session = Depends(get_db)):
     t = db.get(Transfer, transfer_id) or bad_request(ValueError("Перевод не найден"))
     t.false_positive = True
@@ -268,14 +312,16 @@ async def false_positive(transfer_id: int, db: Session = Depends(get_db)):
     return service.serialize_transfer(db, t)
 
 
-@app.post("/api/cooling/fast-forward")
+@app.post("/api/cooling/fast-forward", dependencies=[Depends(check_admin)])
 async def fast_forward(db: Session = Depends(get_db)):
     return {"released": await service.fast_forward(db)}
 
 
 @app.get("/api/relative/{client_id}/inbox")
-def relative_inbox(client_id: int, db: Session = Depends(get_db)):
+def relative_inbox(client_id: int, db: Session = Depends(get_db), x_relative_key: str | None = Header(default=None)):
     c = get_client(db, client_id)
+    tc = trusted_of(db, c.id)
+    require_relative(tc.id if tc else None, x_relative_key)
     acc = service.account_of(db, c)
     rows = db.query(Transfer).filter(Transfer.from_account_id == acc.id, Transfer.synthetic.is_(False),
                                      Transfer.risk_level == "high").order_by(Transfer.id.desc()).limit(20).all()
@@ -417,14 +463,14 @@ def graph_chain(account_id: int, db: Session = Depends(get_db)):
     return graph_service.chain(db, account_id)
 
 
-@app.post("/api/graph/recompute")
+@app.post("/api/graph/recompute", dependencies=[Depends(check_admin)])
 async def graph_recompute(db: Session = Depends(get_db)):
     m = scoring.compute(db)
     await hub.broadcast("graph_updated", {})
     return m
 
 
-@app.post("/api/accounts/{account_id}/freeze")
+@app.post("/api/accounts/{account_id}/freeze", dependencies=[Depends(check_admin)])
 async def freeze_account(account_id: int, db: Session = Depends(get_db)):
     a = db.get(Account, account_id) or bad_request(ValueError("Счёт не найден"))
     a.flags = {**(a.flags or {}), "frozen": True, "confirmed_drop": True}
@@ -435,7 +481,7 @@ async def freeze_account(account_id: int, db: Session = Depends(get_db)):
     return {"frozen": True}
 
 
-@app.post("/api/antifraud/signal")
+@app.post("/api/antifraud/signal", dependencies=[Depends(check_admin)])
 async def antifraud_signal(body: SignalIn, db: Session = Depends(get_db)):
     a = db.get(Account, body.account_id) or bad_request(ValueError("Счёт не найден"))
     sig = mock_center.send_signal(db, a, body.reason)
@@ -449,7 +495,7 @@ def antifraud_journal(db: Session = Depends(get_db)):
     return mock_center.journal(db)
 
 
-@app.post("/api/antifraud/simulate-incoming")
+@app.post("/api/antifraud/simulate-incoming", dependencies=[Depends(check_admin)])
 async def simulate_incoming(body: SimulateSignalIn | None = None, db: Session = Depends(get_db)):
     if body and body.account_id:
         a = db.get(Account, body.account_id)

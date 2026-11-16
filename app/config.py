@@ -16,6 +16,11 @@ class Settings:
     cooling_seconds: int = int(os.getenv("COOLING_SECONDS", "60"))
     scenario_delay: float = float(os.getenv("SCENARIO_DELAY", "2.5"))
     background_activity: bool = os.getenv("BACKGROUND_ACTIVITY", "1") == "1"
+    # Access control (see app/security.py). Empty values are generated once and kept in data/secrets.json.
+    admin_key: str = os.getenv("ADMIN_KEY", "").strip()
+    secret_key: str = os.getenv("SECRET_KEY", "").strip()
+    # Public address of the demo (https://bcc.example.com): used in the links the Telegram bot sends.
+    public_url: str = os.getenv("PUBLIC_URL", "").strip().rstrip("/")
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", "8000"))
 
