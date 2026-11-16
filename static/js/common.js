@@ -1,13 +1,29 @@
 // Shared helpers for all pages: API, WebSocket, formatting, i18n, small charts.
 const CLIENT_ID = 1;
 
+// Access keys from a personal link: ?key=… (presenter/analyst) and ?rk=… (trusted contact).
+// They are kept in this browser and removed from the address bar so they don't show on the projector.
+const KEYS = (() => {
+  const store = { get: (k) => { try { return localStorage.getItem(k) || ""; } catch (_) { return ""; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} } };
+  const q = new URLSearchParams(location.search);
+  let changed = false;
+  for (const [param, name] of [["key", "bcc.adminKey"], ["rk", "bcc.relativeKey"]]) {
+    if (q.has(param)) { store.set(name, q.get(param)); q.delete(param); changed = true; }
+  }
+  if (changed) history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+  return { admin: store.get("bcc.adminKey"), relative: store.get("bcc.relativeKey") };
+})();
+
 async function api(path, opts = {}) {
   const init = { method: opts.method || (opts.body !== undefined ? "POST" : "GET"), headers: {} };
+  if (KEYS.admin) init.headers["X-Admin-Key"] = KEYS.admin;
+  if (KEYS.relative) init.headers["X-Relative-Key"] = KEYS.relative;
   if (opts.body instanceof FormData) init.body = opts.body;
   else if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
   const res = await fetch(path, init);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail?.[0]?.msg || data.detail || `Ошибка ${res.status}`);
+  if (!res.ok) { const err = new Error(data.detail?.[0]?.msg || data.detail || `Ошибка ${res.status}`); err.status = res.status; throw err; }
   return data;
 }
 

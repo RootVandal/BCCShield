@@ -7,6 +7,7 @@ from app.config import settings
 log = logging.getLogger(__name__)
 bot = None
 dp = None
+bot_username: str | None = None  # filled at start, used for t.me deep links on the client screen
 
 
 def _fmt(x: float) -> str:
@@ -14,7 +15,7 @@ def _fmt(x: float) -> str:
 
 
 async def start():
-    global bot, dp
+    global bot, dp, bot_username
     if not settings.telegram_bot_token:
         log.info("TELEGRAM_BOT_TOKEN не задан — бот выключен, работает веб-страница родственника")
         return None
@@ -24,28 +25,48 @@ async def start():
 
     from app.db import SessionLocal
     from app.family import service
+    from app.family.linking import chat_may_decide, link_chat
     from app.models import Transfer, TrustedContact
+    from app.security import relative_key
 
     bot, dp = Bot(settings.telegram_bot_token), Dispatcher()
+    try:
+        bot_username = (await bot.get_me()).username
+    except Exception as e:  # wrong token or no network: the web relative page still works
+        log.warning("Telegram: не удалось подключиться к боту (%s). Проверьте TELEGRAM_BOT_TOKEN.", e)
+        await bot.session.close()
+        bot = dp = None
+        return None
+    log.info("Telegram-бот: @%s", bot_username)
 
     @dp.message(CommandStart())
     async def on_start(message: Message, command: CommandObject):
-        code = (command.args or "").strip().upper()
+        code = (command.args or "").strip()
+        if not code:
+            await message.answer("BCC Shield (демо). Отправьте /start <код> со страницы настроек клиента "
+                                 "или откройте ссылку оттуда.")
+            return
         with SessionLocal() as db:
-            tc = db.query(TrustedContact).filter_by(link_code=code).first() if code else None
-            if not tc:
-                await message.answer("BCC Shield (демо). Отправьте /start <код> со страницы настроек клиента.")
-                return
-            tc.telegram_chat_id = message.chat.id
-            db.commit()
-        await message.answer(f"✅ Вы подключены как доверенное лицо ({tc.relation}). "
-                             "Сюда будут приходить предупреждения и запросы на подтверждение переводов.")
+            ok, text = link_chat(db, message.chat.id, code)
+            tc = db.query(TrustedContact).filter_by(telegram_chat_id=message.chat.id).first() if ok else None
+        await message.answer(text)
+        if tc and settings.public_url:
+            await message.answer(f"Кабинет доверенного лица в браузере: {settings.public_url}/relative?rk={relative_key(tc.id)}\n"
+                                 "Никому не пересылайте эту ссылку.")
 
     @dp.callback_query(F.data.startswith("dec:"))
     async def on_decision(cb: CallbackQuery):
-        _, decision, tid = cb.data.split(":")
+        try:
+            _, decision, tid = cb.data.split(":")
+            tid = int(tid)
+        except ValueError:
+            await cb.answer("Неверный запрос")
+            return
         with SessionLocal() as db:
-            t = db.get(Transfer, int(tid))
+            t = db.get(Transfer, tid)
+            if not t or not chat_may_decide(db, cb.message.chat.id, t):
+                await cb.answer("Решение может принять только доверенное лицо этого клиента", show_alert=True)
+                return
             try:
                 await service.decide(db, t, decision, by="relative_telegram")
                 text = "✅ Перевод подтверждён" if decision == "approve" else "❌ Перевод отклонён, деньги в безопасности"

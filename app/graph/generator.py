@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.models import Account, Client, TrustedContact, Transfer
+from app.security import new_link_code
 
 FIRST = ["Арман", "Ерлан", "Дамир", "Санжар", "Нурсултан", "Асхат", "Олжас", "Жандос", "Руслан", "Ильяс",
          "Айгерим", "Динара", "Жанна", "Асель", "Мадина", "Камила", "Алия", "Гульмира", "Сабина", "Томирис",
@@ -98,7 +99,7 @@ def generate(db: Session, seed: int = 42, now: datetime | None = None) -> dict:
         client_acc.append(g.account(name, last4=l4, client_id=c.id))
     saule, aidar = clients[0], clients[1]
     db.add(TrustedContact(client_id=saule.id, name="Айдар", relation="сын", phone=aidar.phone,
-                          link_code="SAULE-7341", amount_threshold=100_000))
+                          link_code=new_link_code("SAULE"), amount_threshold=100_000))
 
     persons = [g.account(g.person_name()) for _ in range(300)]
     externals = [g.account(g.person_name(), bank=rng.choice(EXT_BANKS), external=True) for _ in range(60)]

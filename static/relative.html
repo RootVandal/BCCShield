@@ -4,10 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Родственник · BCC Shield</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <link rel="stylesheet" href="/static/css/fonts.css">
   <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/tailwind.css">
   <style>
     .side-note { width: 300px; color: var(--muted); font-size: 13px; line-height: 1.55; }
     @media (max-width: 1100px) { .side-note { display: none; } }
@@ -108,15 +107,33 @@
 
     async function decide(id, decision, btn) {
       btn.disabled = true;
-      try { await api(`/api/transfers/${id}/decision`, { body: { decision, by: "relative_web" } }); }
+      try { await api(`/api/transfers/${id}/decision`, { body: { decision } }); }
       catch (e) { alertInline(e.message); }
       await load();
     }
     function alertInline(msg) { const d = document.createElement("div"); d.className = "toast"; d.innerHTML = `<div class="card px-4 py-3 text-[13px]">${esc(msg)}</div>`; document.querySelector(".phone").appendChild(d); setTimeout(() => d.remove(), 3500); }
-    async function confirmShieldOff() { await api(`/api/clients/${CLIENT_ID}/shield/confirm-off`, { body: {} }); R.shieldOff = null; await load(); }
+    async function confirmShieldOff() {
+      try { await api(`/api/clients/${CLIENT_ID}/shield/confirm-off`, { body: {} }); } catch (e) { alertInline(e.message); }
+      R.shieldOff = null; await load();
+    }
+
+    function renderLocked() {
+      R.locked = true;
+      $("#mom").innerHTML = `<div class="text-[15px] font-semibold">Нужна персональная ссылка</div>
+        <p class="text-[13px] muted mt-2 leading-relaxed">Подтверждать переводы и отключение щита может только доверенное лицо.
+        Откройте эту страницу по ссылке со стартовой страницы демо, из Telegram-бота или из лога сервера (<span class="mono">/relative?rk=…</span>).</p>`;
+      $("#alerts").innerHTML = ""; $("#requests").innerHTML = ""; $("#count").textContent = "";
+    }
 
     async function load() {
-      const [inbox, calls] = await Promise.all([api(`/api/relative/${CLIENT_ID}/inbox`), api("/api/calls/active")]);
+      let inbox, calls;
+      try {
+        [inbox, calls] = await Promise.all([api(`/api/relative/${CLIENT_ID}/inbox`), api("/api/calls/active")]);
+      } catch (e) {
+        if (e.status === 403) return renderLocked();
+        throw e;
+      }
+      R.locked = false;
       R.client = inbox.client; R.transfers = inbox.transfers; R.alerts = inbox.alerts;
       R.call = calls.find((c) => c.client_id === CLIENT_ID) || null;
       renderMom(); renderAlerts(); renderRequests();
@@ -124,6 +141,7 @@
 
     connectWS((type, d) => {
       if (type === "reset") return location.reload();
+      if (R.locked) return;
       if (type === "relative_alert" && d.client_id === CLIENT_ID) { R.alerts.push(d); renderAlerts(); vibrate([400, 100, 400]); $("#body").scrollTop = 0; }
       if (type === "call_update" && d.client_id === CLIENT_ID) { R.call = { risk: d.risk, history: d.history }; renderMom(); }
       if (type === "call_ended" && d.client_id === CLIENT_ID) { R.call = null; renderMom(); }
@@ -134,7 +152,15 @@
 
     startSand(document.getElementById("sand"), { density: 0.8, alpha: 0.75 });
     api("/api/config").then((c) => ($("#tg").textContent = c.telegram_enabled ? "Telegram ✓" : "веб-режим"));
-    load();
+    (async () => {
+      if (!KEYS.relative) { // the presenter (this computer or ?key=…) gets the trusted contact's link automatically
+        try {
+          const rk = new URL((await api("/api/demo/links")).relative, location.origin).searchParams.get("rk");
+          if (rk) { KEYS.relative = rk; try { localStorage.setItem("bcc.relativeKey", rk); } catch (_) {} }
+        } catch (_) {}
+      }
+      load();
+    })();
   </script>
 </body>
 </html>

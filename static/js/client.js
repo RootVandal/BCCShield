@@ -262,6 +262,9 @@ function renderSettings() {
         <div class="mt-4 pt-4 border-t hair"><div class="text-[13px]">${t("tgLink")}</div>
           <div class="text-[12px] muted mt-1">${S.cfg.telegram_enabled ? "Отправьте боту команду:" : "Бот выключен (нет TELEGRAM_BOT_TOKEN). Команда для бота:"}</div>
           <div class="mono text-[13px] mt-2 card-2 px-3 py-2 select-all">/start ${esc(tc.link_code)}</div>
+          ${S.cfg.telegram_bot_username && !tc.telegram_linked ? `<a class="btn btn-sm btn-pale mt-2" target="_blank" rel="noopener"
+            href="https://t.me/${encodeURIComponent(S.cfg.telegram_bot_username)}?start=${encodeURIComponent(tc.link_code)}">Открыть @${esc(S.cfg.telegram_bot_username)}</a>` : ""}
+          <div class="text-[11.5px] faint mt-2">Код одноразовый: после подключения перепривязать Telegram с этого телефона нельзя.</div>
           <div class="text-[12px] mt-2 ${tc.telegram_linked ? "text-[color:var(--accent)]" : "faint"}">${tc.telegram_linked ? "✓ Telegram подключён" : "Telegram не подключён · работает веб-страница родственника"}</div></div>`
         : `<p class="muted text-[13px]">—</p>`}</div>
     <div class="card p-4 flex justify-between items-center"><span class="text-[14px]">${t("protection")}</span>
