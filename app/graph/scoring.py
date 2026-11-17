@@ -50,7 +50,7 @@ def _clip(x: float) -> float:
 def compute(db: Session) -> dict:
     now = datetime.now()
     accounts = {a.id: a for a in db.query(Account).all()}
-    transfers = db.query(Transfer).filter(Transfer.status == "completed").all()
+    transfers = db.query(Transfer).filter(Transfer.status == "completed", Transfer.kind == "transfer").all()
     confirmed_ids = {s.account_id for s in db.query(AntifraudSignal).all()}
 
     incoming = defaultdict(list)

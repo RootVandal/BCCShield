@@ -31,7 +31,10 @@ UPGRADES = {
         "status": "VARCHAR(16) DEFAULT 'active'", "confirm_new": "BOOLEAN DEFAULT 1", "confirm_loans": "BOOLEAN DEFAULT 0",
         "notify_all": "BOOLEAN DEFAULT 1", "verify_phone": "BOOLEAN DEFAULT 0", "created_at": "DATETIME",
     },
-    "loans": {"status": "VARCHAR(16) DEFAULT 'approved'", "decided_by": "VARCHAR(32)"},
+    "loans": {"status": "VARCHAR(16) DEFAULT 'approved'", "decided_by": "VARCHAR(32)", "cooling_until": "DATETIME",
+              "reasons": "JSON DEFAULT '[]'"},
+    "clients": {"deposit": "FLOAT DEFAULT 0", "telecom_alert_until": "DATETIME"},
+    "transfers": {"kind": "VARCHAR(16) DEFAULT 'transfer'"},
 }
 
 

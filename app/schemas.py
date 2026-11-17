@@ -30,6 +30,17 @@ class TransferIn(BaseModel):
     answers: Answers | None = None
 
 
+class OperationIn(BaseModel):
+    kind: Literal["cash", "deposit"]
+    amount: float | None = Field(default=None, gt=0)  # deposit closure always takes the whole deposit
+    behavior: dict = Field(default_factory=dict)
+    answers: Answers | None = None
+
+
+class TelecomSignalIn(BaseModel):
+    minutes: int = Field(default=15, ge=1, le=120)
+
+
 class DecisionIn(BaseModel):
     decision: Literal["approve", "reject"]
     by: str = "relative_web"  # ignored: who decided is taken from the credentials, never from the body

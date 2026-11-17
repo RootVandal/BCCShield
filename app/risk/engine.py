@@ -14,19 +14,39 @@ def level_of(score: float) -> str:
 
 
 def build_ctx(db: Session, client: Client, from_acc: Account, to_acc: Account, amount: float,
-              behavior: dict | None = None, now: datetime | None = None) -> Ctx:
+              behavior: dict | None = None, now: datetime | None = None, kind: str = "transfer") -> Ctx:
     now = now or datetime.now()
     behavior = behavior or {}
     call = (db.query(CallSession).filter_by(client_id=client.id, status="active")
             .order_by(CallSession.started_at.desc()).first())
-    loan = db.query(Loan).filter_by(client_id=client.id).order_by(Loan.created_at.desc()).first()
+    loan = (db.query(Loan).filter_by(client_id=client.id, status="approved")  # money actually received
+            .order_by(Loan.created_at.desc()).first())
     hist = db.query(Transfer).filter(Transfer.from_account_id == from_acc.id, Transfer.status == "completed").all()
     known = any(t.to_account_id == to_acc.id for t in hist) or db.query(Transfer).filter(
         Transfer.from_account_id == to_acc.id, Transfer.to_account_id == from_acc.id).first() is not None
-    has_signal = db.query(AntifraudSignal).filter_by(account_id=to_acc.id, direction="in").first() is not None
+    has_signal = kind == "transfer" and db.query(AntifraudSignal).filter_by(account_id=to_acc.id,
+                                                                             direction="in").first() is not None
     return Ctx(client=client, amount=amount, recipient=to_acc, now=now, call=call, loan=loan,
                history=[t.amount for t in hist], known_recipient=known, has_signal=has_signal,
-               pasted=bool(behavior.get("pasted")), fill_seconds=behavior.get("fill_seconds"))
+               pasted=bool(behavior.get("pasted")), fill_seconds=behavior.get("fill_seconds"), kind=kind,
+               telecom=telecom_active(client, now), call_scheme=call_scheme(call))
+
+
+def telecom_active(client: Client, now: datetime | None = None) -> bool:
+    return bool(client.telecom_alert_until and client.telecom_alert_until > (now or datetime.now()))
+
+
+def call_scheme(call: CallSession | None) -> str | None:
+    """Scheme recognised in the live call: LLM verdict if any, else the keyword categories heard so far."""
+    if not call or call.risk_score < 0.5:
+        return None
+    from app.call_guard import analyzer
+    verdict = (call.llm_verdict or {}).get("scheme")
+    if verdict and verdict != "none":
+        return verdict
+    st = analyzer._states.get(call.id)
+    scheme = analyzer.guess_scheme(st.categories) if st else "other"
+    return None if scheme == "none" else scheme
 
 
 def evaluate(ctx: Ctx) -> dict:
@@ -49,6 +69,9 @@ def evaluate(ctx: Ctx) -> dict:
         "loan_minutes_ago": round((ctx.now - ctx.loan.created_at).total_seconds() / 60, 1) if ctx.loan else None,
         "new_recipient": not ctx.known_recipient,
         "protection_mode": ctx.client.protection_mode,
+        "call_scheme": ctx.call_scheme,
+        "telecom_signal": ctx.telecom,
+        "kind": ctx.kind,
         "pasted": ctx.pasted,
         "fill_seconds": ctx.fill_seconds,
     }

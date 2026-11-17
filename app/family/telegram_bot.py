@@ -267,23 +267,42 @@ async def notify_call_alert(db, client, scheme_ru: str):
                                     "текущее значение в семейном кабинете.", with_app=True)
 
 
+VERB = {"transfer": "переводит", "cash": "снимает наличными", "deposit": "досрочно закрывает депозит на"}
+# what the trusted contact should know about the scheme heard in the call
+SCHEME_HINTS = {
+    "relative_in_trouble": "📞 Звонящий выдаёт себя за родственника в беде. Если это не вы и не ваши близкие — "
+                           "нажмите «Отклонить: это не я» и позвоните ей.",
+    "safe_account": "📞 Схема «безопасный счёт»: банк никогда не просит переводить деньги.",
+    "telecom_egov": "📞 Схема «оператор → eGov → вы дроппер»: дальше обычно просят снять наличные для курьера.",
+}
+
+
 async def notify_transfer_request(db, client, t: dict):
     reasons = "\n".join(f"• {r['ru']}" for r in t["reasons"][:6])
-    text = (f"🛡 Нужно ваше решение\n{client.name} переводит {fmt(t['amount'])}\n"
-            f"Получатель: {t['to']['name']} · {t['to']['bank']} {t['to']['card']}\n\nПричины:\n{reasons}")
+    kind = t.get("kind", "transfer")
+    to = f"\nПолучатель: {t['to']['name']} · {t['to']['bank']} {t['to']['card']}" if kind == "transfer" else ""
+    scheme = (t.get("context") or {}).get("call_scheme")
+    hint = f"\n\n{SCHEME_HINTS[scheme]}" if scheme in SCHEME_HINTS else ""
+    text = f"🛡 Нужно ваше решение\n{client.name} {VERB.get(kind, 'переводит')} {fmt(t['amount'])}{to}\n\nПричины:\n{reasons}{hint}"
+    reject = "❌ Отклонить: это не я" if scheme == "relative_in_trouble" else "❌ Отклонить"
     await _broadcast(db, client.id, text, [[("✅ Подтвердить", f"dec:approve:{t['id']}"),
-                                            ("❌ Отклонить", f"dec:reject:{t['id']}")]], with_app=True)
+                                            (reject, f"dec:reject:{t['id']}")]], with_app=True)
 
 
 async def notify_transfer_done(db, client, t: dict):
     level = {"low": "✓ обычный перевод", "medium": "⚠️ средний риск", "high": "⚠️ высокий риск"}.get(t["risk_level"], "")
-    await _broadcast(db, client.id, f"💸 {client.name.split()[0]}: −{fmt(t['amount'])}\n{t['to']['name']} · "
-                                    f"{t['to']['bank']} {t['to']['card']}\n{level}", feed=True)
+    kind = t.get("kind", "transfer")
+    head = {"cash": f"💵 {client.name.split()[0]}: снято наличными {fmt(t['amount'])}",
+            "deposit": f"🏦 {client.name.split()[0]}: депозит закрыт, +{fmt(t['amount'])} на карту"}.get(
+        kind, f"💸 {client.name.split()[0]}: −{fmt(t['amount'])}\n{t['to']['name']} · {t['to']['bank']} {t['to']['card']}")
+    await _broadcast(db, client.id, f"{head}\n{level}", feed=True)
 
 
 async def notify_loan_request(db, client, loan):
-    await _broadcast(db, client.id, f"🏦 {client.name} оформляет кредит {fmt(loan.amount)}.\nМошенники часто заставляют "
-                                    "брать кредиты по телефону. Подтвердить?",
+    why = "\n".join(f"• {r['ru']}" for r in (loan.reasons or []))
+    await _broadcast(db, client.id, f"🏦 {client.name} оформляет кредит {fmt(loan.amount)}.\n"
+                                    + (f"Деньги не выданы:\n{why}\n\n" if why else "")
+                                    + "Мошенники часто заставляют брать кредиты по телефону. Подтвердить?",
                      [[("✅ Подтвердить", f"loan:approve:{loan.id}"), ("❌ Отклонить", f"loan:reject:{loan.id}")]],
                      with_app=True)
 

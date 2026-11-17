@@ -20,6 +20,9 @@ class Client(Base):
     shield_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     protection_mode: Mapped[str] = mapped_column(String(8), default="off")  # off / on
     language: Mapped[str] = mapped_column(String(4), default="ru")
+    deposit: Mapped[float] = mapped_column(Float, default=0)                  # savings deposit (can be closed early)
+    # "Telecom Antifraud" pilot: the mobile operator reports a suspicious call to the bank before any transfer
+    telecom_alert_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class TrustedContact(Base):
@@ -77,6 +80,8 @@ class Transfer(Base):
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
     false_positive: Mapped[bool] = mapped_column(Boolean, default=False)
     synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
+    # transfer / cash (withdrawal at a cash desk or ATM) / deposit (early deposit closure to the card)
+    kind: Mapped[str] = mapped_column(String(16), default="transfer")
 
 
 class Loan(Base):
@@ -85,8 +90,10 @@ class Loan(Base):
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     amount: Mapped[float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
-    status: Mapped[str] = mapped_column(String(16), default="approved")      # pending_relative / approved / rejected
+    status: Mapped[str] = mapped_column(String(16), default="approved")  # pending_relative / cooling / approved / rejected
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    cooling_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reasons: Mapped[list] = mapped_column(JSON, default=list)
 
 
 class CallSession(Base):

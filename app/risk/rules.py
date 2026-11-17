@@ -19,6 +19,14 @@ class Ctx:
     has_signal: bool = False
     pasted: bool = False
     fill_seconds: float | None = None
+    kind: str = "transfer"            # transfer / cash / deposit
+    telecom: bool = False             # the mobile operator reported a suspicious call right now
+    call_scheme: str | None = None    # scheme recognised in the current call (context for the relative)
+
+
+# what the operation is called in reasons: (ru, kk)
+OPS = {"transfer": ("Перевод", "Аударым"), "cash": ("Снятие наличных", "Қолма-қол ақша алу"),
+       "deposit": ("Закрытие депозита", "Депозитті жабу")}
 
 
 def _pct(x: float) -> str:
@@ -32,7 +40,8 @@ def call_risk(c: Ctx):
         p = _pct(c.call.risk_score)
         return (round(55 * c.call.risk_score), f"Идёт звонок с риском мошенничества {p}",
                 f"Алаяқтық қаупі {p} қоңырау жүріп жатыр")
-    return 8, "Перевод во время активного звонка", "Қоңырау кезіндегі аударым"
+    ru, kk = OPS[c.kind]
+    return 8, f"{ru} во время активного звонка", f"Қоңырау кезіндегі әрекет: {kk.lower()}"
 
 
 def recent_loan(c: Ctx):
@@ -47,12 +56,14 @@ def recent_loan(c: Ctx):
 
 
 def new_recipient(c: Ctx):
-    if c.known_recipient:
+    if c.known_recipient or c.kind != "transfer":
         return None
     return 15, "Новый получатель — раньше переводов не было", "Жаңа алушы — бұрын аударым болмаған"
 
 
 def unusual_amount(c: Ctx):
+    if c.kind == "deposit":  # the amount is the whole deposit, comparing it with transfers says nothing
+        return None
     if len(c.history) < 3:
         return (10, "Мало истории переводов для сравнения", "Салыстыруға аударым тарихы аз") if c.amount >= 200_000 else None
     hs = sorted(c.history)
@@ -71,6 +82,8 @@ def night_time(c: Ctx):
 
 
 def risky_recipient(c: Ctx):
+    if c.kind != "transfer":
+        return None
     r, fl = c.recipient, c.recipient.flags or {}
     if fl.get("antifraud") or c.has_signal:
         return 40, "Получатель в базе Антифрод-центра", "Алушы Антифрод-орталығының базасында"
@@ -82,6 +95,32 @@ def risky_recipient(c: Ctx):
     if r.risk_score >= LINKED_THRESHOLD:
         return 15, "Получатель имеет подозрительные связи в графе", "Алушының графта күдікті байланыстары бар"
     return None
+
+
+def cash_out(c: Ctx):
+    """Scammers moved to cash: «снимите и передайте курьеру на хранение», «купите доллары»."""
+    if c.kind != "cash":
+        return None
+    if c.amount >= 300_000:
+        return (25, "Крупное снятие наличных: мошенники перешли на курьеров и «хранение» денег",
+                "Қолма-қол ақшаны ірі сомамен алу: алаяқтар курьерлер мен «сақтауға» көшті")
+    if c.amount >= 100_000:
+        return 10, "Снятие наличных крупнее обычного", "Әдеттегіден ірі қолма-қол ақша алу"
+    return None
+
+
+def deposit_early(c: Ctx):
+    if c.kind != "deposit":
+        return None
+    return (25, "Досрочное закрытие депозита — частый первый шаг схем «безопасный счёт» и «курьер»",
+            "Депозитті мерзімінен бұрын жабу — «қауіпсіз шот» пен «курьер» схемаларының жиі алғашқы қадамы")
+
+
+def telecom_signal(c: Ctx):
+    if not c.telecom:
+        return None
+    return (45, "Оператор связи: клиенту сейчас звонят с номера из базы мошенников («Телеком Антифрод»)",
+            "Байланыс операторы: клиентке қазір алаяқтар базасындағы нөмірден қоңырау шалуда («Телеком Антифрод»)")
 
 
 def elderly(c: Ctx):
@@ -104,6 +143,9 @@ def rushed(c: Ctx):
 
 RULES = {
     "call_risk": call_risk,
+    "telecom_signal": telecom_signal,
+    "cash_out": cash_out,
+    "deposit_early": deposit_early,
     "recent_loan": recent_loan,
     "risky_recipient": risky_recipient,
     "new_recipient": new_recipient,

@@ -15,7 +15,8 @@ const CONTRIB_RU = {
 };
 const RULE_RU = { call_risk: "Звонок", recent_loan: "Кредит → перевод", risky_recipient: "Получатель в графе", new_recipient: "Новый получатель",
   unusual_amount: "Нетипичная сумма", night_time: "Ночь", elderly: "Возраст 60+", pasted: "Вставка из буфера", rushed: "Спешка",
-  protection_mode: "Режим защиты", answer_on_call: "Ответ: идёт звонок", answer_safe_account: "Ответ: «безопасный счёт»", answer_impersonation: "Ответ: «банк/полиция»", shield_off: "Щит выключен" };
+  protection_mode: "Режим защиты", telecom_signal: "Сигнал оператора", cash_out: "Снятие наличных", deposit_early: "Закрытие депозита",
+  family_amount: "Правило семьи: сумма", family_new: "Правило семьи: новый получатель", answer_on_call: "Ответ: идёт звонок", answer_safe_account: "Ответ: «безопасный счёт»", answer_impersonation: "Ответ: «банк/полиция»", shield_off: "Щит выключен" };
 
 // ---------- metrics -----------------------------------------------------------------------------------
 function renderMetrics(flash) {
@@ -28,10 +29,13 @@ function renderMetrics(flash) {
     ["Найдено дропперов", m.droppers_found ?? 0, "drops"],
     ["Precision графа", (m.precision ?? 0).toFixed(2), "p"],
     ["Recall графа", (m.recall ?? 0).toFixed(2), "r"],
-    ["Ложные паузы", pct(m.false_pause_rate || 0), "fp"],
+    // honest number from the evaluation set (app/eval.py) instead of a rate counted on three demo calls
+    A.eval ? ["Ложные тревоги звонков", pct(A.eval.normal.rate), "fp", null,
+      `на ${A.eval.normal.total} обычных · мошенники найдены ${pct(A.eval.scam.rate)} из ${A.eval.scam.total}`]
+      : ["Ложные паузы", pct(m.false_pause_rate || 0), "fp"],
   ];
-  $("#metrics").innerHTML = tiles.map(([l, v, k, c]) => `<div class="metric ${flash === k ? "flash" : ""}"><div class="label leading-snug">${l}</div>
-    <div class="v num" ${c ? `style="color:${c}"` : ""}>${v}</div></div>`).join("");
+  $("#metrics").innerHTML = tiles.map(([l, v, k, c, sub]) => `<div class="metric ${flash === k ? "flash" : ""}" ${sub ? `title="${esc(sub)}"` : ""}><div class="label leading-snug">${l}</div>
+    <div class="v num" ${c ? `style="color:${c}"` : ""}>${v}</div>${sub ? `<div class="text-[10.5px] faint leading-snug mt-0.5">${esc(sub)}</div>` : ""}</div>`).join("");
 }
 async function loadMetrics(flash) {
   const prev = A.metrics.saved;
@@ -58,7 +62,7 @@ function renderCalls() {
 function feedRow(t) {
   const top = t.reasons?.[0];
   return `<div class="feed-row feed-item ${A.selected?.type === "transfer" && A.selected.id === t.id ? "sel" : ""}" onclick="openTransfer(${t.id})">
-    <div class="flex items-center justify-between gap-2"><span class="text-[12.5px] truncate">${esc(t.from.name.split(" ").slice(0, 2).join(" "))} → ${esc(t.to.bank)} ${esc(t.to.card)}</span>
+    <div class="flex items-center justify-between gap-2"><span class="text-[12.5px] truncate">${esc(t.from.name.split(" ").slice(0, 2).join(" "))} ${t.kind && t.kind !== "transfer" ? `· ${esc(t.title)}` : `→ ${esc(t.to.bank)} ${esc(t.to.card)}`}</span>
       <span class="num text-[13px] font-medium whitespace-nowrap">${fmt(t.amount)}</span></div>
     <div class="flex items-center gap-1.5 mt-1.5"><span class="text-[11px] faint mono">${timeHM(t.created_at)}</span>${levelPill(t.risk_level, t.risk_score)}${t.status !== "completed" ? statusPill(t.status) : ""}
       ${t.false_positive ? '<span class="pill neutral">ложное</span>' : ""}</div>
@@ -248,6 +252,10 @@ const simulateSignal = (btn, id) => withBtn(btn, async () => {
   const r = await api("/api/antifraud/simulate-incoming", { body: id ? { account_id: id } : {} });
   if (r.warned_clients.length) toastA(`📡 Сигнал АФЦ: ${esc(r.signal.payload.bank)} ${esc(r.signal.payload.card)}. Предупреждены клиенты: ${r.warned_clients.map((c) => esc(c.name)).join(", ")}`);
 });
+const telecomSignal = (btn) => withBtn(btn, async () => {
+  await api(`/api/clients/${DEMO_CLIENT_ID}/telecom-signal`, { body: {} });
+  toastA("📶 Оператор связи сообщил банку: Сауле звонят с номера из базы мошенников. Включён режим защиты, доверенные лица уведомлены.");
+});
 const resetDemo = (btn) => withBtn(btn, () => api("/api/demo/reset", { body: {} }));
 function toastA(html) {
   const d = document.createElement("div");
@@ -271,7 +279,7 @@ function onEvent(type, d) {
   if (type === "call_ended") { delete A.calls[d.call_id]; renderCalls(); }
   if (type === "antifraud_signal") loadJournal();
   if (type === "graph_updated") { clearTimeout(graphTimer); graphTimer = setTimeout(() => loadGraph(d.focus), 250); }
-  if (type === "relative_alert") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
+  if (type === "relative_alert" && d.source !== "telecom") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
 }
 
 async function init() {
@@ -282,6 +290,7 @@ async function init() {
   A.feed = feed;
   calls.forEach((c) => (A.calls[c.call_id] = { ...c, client: c.client_id === DEMO_CLIENT_ID ? "Сауле Ахметова" : null }));
   renderFeed(); renderCalls(); loadMetrics(); loadJournal();
+  api("/api/eval").then((e) => { A.eval = e; renderMetrics(); }).catch(() => {});
   $("#detail").innerHTML = `<div class="text-[13px] muted leading-relaxed">Выберите операцию в ленте или узел графа.<br><br>
     <span class="faint">Граф строится по синтетическим переводам за 30 дней: ~430 счетов, ~5 300 переводов, 3 дроп-сети. Узлы с риском ≥ 60 считаются дропперами. Внешние карты других банков показаны серыми прямоугольниками.</span></div>`;
   $("#thr").addEventListener("input", (e) => ($("#thr-v").textContent = e.target.value));

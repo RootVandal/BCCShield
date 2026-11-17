@@ -27,7 +27,7 @@ function wardCard(w) {
     <div class="grid grid-cols-3 gap-2 mt-4 text-[12px]">
       <div class="card-2 p-2.5"><div class="muted">Щит</div><div class="mt-0.5 ${c.shield_enabled ? "text-[color:var(--accent)]" : ""}">${c.shield_enabled ? "включён" : "выключен"}</div></div>
       <div class="card-2 p-2.5"><div class="muted">Защита</div><div class="mt-0.5 ${c.protection_mode === "on" ? "text-[color:var(--danger)]" : ""}">${c.protection_mode === "on" ? "режим ON" : "обычный"}</div></div>
-      <div class="card-2 p-2.5"><div class="muted">Звонок</div><div class="mt-0.5 num" style="color:${call ? riskColor(call.risk) : "var(--muted)"}">${call ? "риск " + pct(call.risk) : "нет"}</div></div></div>
+      <div class="card-2 p-2.5"><div class="muted">Звонок</div><div class="mt-0.5 num" style="color:${call ? riskColor(call.risk) : c.telecom_alert ? "var(--danger)" : "var(--muted)"}">${call ? "риск " + pct(call.risk) : c.telecom_alert ? "сигнал оператора" : "нет"}</div></div></div>
     ${call && call.history?.length ? `<div class="mt-3">${sparkSVG(call.history.map((h) => h.score), 320, 36)}</div>` : ""}
     ${c.protection_mode === "on" ? `<button class="btn btn-sm btn-block mt-3" onclick="protectionOff(${c.id}, this)">Снять режим защиты (я поговорил с ней)</button>` : ""}
     ${off ? `<div class="mt-3 card-2 p-3 text-[12.5px]" style="border-color:rgba(242,179,61,.4)">${esc(firstName(c.name))} хочет отключить семейный щит. Если вы об этом не договаривались — позвоните ей.
@@ -40,33 +40,44 @@ function alertCards(w) {
   return w.alerts.slice().reverse().slice(0, 2).map((a) => `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#3a0f0a,#24100d);border:1px solid rgba(255,92,77,.45)">
     <div class="flex items-start gap-3"><div class="text-[22px] leading-none">⚠️</div><div class="flex-1">
       <div class="text-[15px] font-semibold text-white leading-snug">${esc(firstName(a.client))} сейчас звонят мошенники</div>
-      <div class="text-[13px] text-white/75 mt-1">Схема: ${esc(a.scheme.ru)} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)}${F.calls?.[a.client_id] ? " сейчас" : ""} · ${timeHM(a.at)}</div></div></div>
+      <div class="text-[13px] text-white/75 mt-1">${a.source === "telecom" ? `📡 Сообщил оператор связи («Телеком Антифрод») · ${timeHM(a.at)}`
+        : `Схема: ${esc(a.scheme.ru)} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)}${F.calls?.[a.client_id] ? " сейчас" : ""} · ${timeHM(a.at)}`}</div></div></div>
     <a class="btn btn-block mt-3" style="background:#fff;color:#7a1109;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить</a></div>`).join("");
 }
 
-function decisionRow(kind, id) {
+function decisionRow(kind, id, rejectLabel = null) {
   return `<div class="grid grid-cols-2 gap-px bg-[color:var(--line)] border-t hair">
     <button class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px]" style="color:var(--accent)" onclick="decide('${kind}',${id},'approve',this)">✅ ${kind === "contact" ? "Разрешить" : "Подтвердить"}</button>
-    <button class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px] font-semibold" style="color:var(--danger)" onclick="decide('${kind}',${id},'reject',this)">❌ ${kind === "contact" ? "Не разрешать" : "Отклонить"}</button></div>`;
+    <button class="h-12 bg-[color:var(--surface)] hover:bg-[color:var(--surface-2)] text-[13.5px] font-semibold" style="color:var(--danger)" onclick="decide('${kind}',${id},'reject',this)">❌ ${rejectLabel || (kind === "contact" ? "Не разрешать" : "Отклонить")}</button></div>`;
 }
+
+const VERB = { transfer: "переводит", cash: "снимает наличными", deposit: "досрочно закрывает депозит" };
+const SCHEME_HINT = {
+  relative_in_trouble: "Звонящий выдаёт себя за родственника в беде. Если это не вы и не ваши близкие — отклоните и позвоните ей.",
+  safe_account: "Схема «безопасный счёт»: банк никогда не просит переводить деньги.",
+  telecom_egov: "Схема «оператор → eGov → вы дроппер»: дальше обычно просят снять наличные для курьера.",
+};
 
 function transferRequest(t) {
   const left = t.cooling_until ? Math.max(0, Math.round((new Date(t.cooling_until) - Date.now()) / 1000)) : 0;
+  const kind = t.kind || "transfer", scheme = t.context?.call_scheme;
   return `<div class="rounded-[18px] overflow-hidden bg-[color:var(--surface)] border fade-in" style="border-color:rgba(242,179,61,.45)">
-    <div class="p-4"><div class="flex justify-between items-start"><div><div class="text-[12px] muted">${esc(firstName(t.from.name))} переводит</div>
+    <div class="p-4"><div class="flex justify-between items-start"><div><div class="text-[12px] muted">${esc(firstName(t.from.name))} ${VERB[kind] || "переводит"}</div>
       <div class="text-[26px] font-semibold num mt-0.5">${fmt(t.amount)}</div></div>${statusPill(t.status)}</div>
-      <div class="flex justify-between text-[13px] mt-3 gap-3"><span class="muted">Кому</span><span class="text-right">${esc(t.to.name)} · ${esc(t.to.bank)} ${esc(t.to.card)}</span></div>
+      ${kind === "transfer" ? `<div class="flex justify-between text-[13px] mt-3 gap-3"><span class="muted">Кому</span><span class="text-right">${esc(t.to.name)} · ${esc(t.to.bank)} ${esc(t.to.card)}</span></div>` : `<div class="mt-3"></div>`}
+      ${SCHEME_HINT[scheme] ? `<div class="mt-3 rounded-xl px-3 py-2.5 text-[12.5px] leading-snug" style="background:var(--danger-dim);color:#ffb1a8">📞 ${SCHEME_HINT[scheme]}</div>` : ""}
       <div class="flex justify-between text-[13px] mt-1.5"><span class="muted">Риск</span>${levelPill(t.risk_level, t.risk_score)}</div>
       <div class="flex justify-between text-[13px] mt-1.5"><span class="muted">Без ответа выполнится через</span><span class="num mono cd" data-until="${t.cooling_until}">${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}</span></div>
       <div class="label mt-4 mb-1.5">Почему на паузе</div>
       <ul class="text-[13px] flex flex-col gap-1">${t.reasons.slice(0, 6).map((r) => `<li class="flex gap-2"><span style="color:var(--danger)">•</span><span>${esc(r.ru)}</span></li>`).join("")}</ul></div>
-    ${t.status === "pending_relative" ? decisionRow("transfer", t.id) : ""}</div>`;
+    ${t.status === "pending_relative" ? decisionRow("transfer", t.id, scheme === "relative_in_trouble" ? "Отклонить: это не я" : null) : ""}</div>`;
 }
 
 function loanRequest(l, w) {
   return `<div class="rounded-[18px] overflow-hidden bg-[color:var(--surface)] border fade-in" style="border-color:rgba(242,179,61,.45)">
     <div class="p-4"><div class="text-[12px] muted">${esc(firstName(w.client.name))} оформляет кредит</div>
       <div class="text-[26px] font-semibold num mt-0.5">${fmt(l.amount)}</div>
+      ${(l.reasons || []).length ? `<div class="label mt-4 mb-1.5">Почему деньги не выданы</div><ul class="text-[13px] flex flex-col gap-1">${l.reasons.map((r) => `<li class="flex gap-2"><span style="color:var(--danger)">•</span><span>${esc(r.ru)}</span></li>`).join("")}</ul>` : ""}
       <p class="text-[13px] muted mt-2 leading-relaxed">Мошенники часто заставляют взять кредит и сразу перевести деньги. Позвоните и уточните, что это её решение.</p></div>
     ${decisionRow("loan", l.id)}</div>`;
 }
@@ -81,7 +92,7 @@ function contactRequest(p, w) {
 }
 
 function txLine(t) {
-  const out = t.direction === "out", other = out ? t.to : t.from;
+  const dep = t.kind === "deposit", out = !dep && t.direction === "out", other = dep || out ? t.to : t.from;
   return `<div class="flex items-center gap-3 py-3 border-b hair">
     <div class="avatar w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold" style="background:var(--surface-3)">${esc((other.name || "?")[0])}</div>
     <div class="flex-1 min-w-0"><div class="text-[14px] truncate">${esc(other.name)}</div>
@@ -124,7 +135,7 @@ function renderFamily() {
       `<div class="card p-5 text-center text-[13px] muted leading-relaxed">Всё спокойно. Если ${esc(firstName(w.client.name))} попробует сделать рискованный перевод, взять кредит или добавить нового доверенного, запрос придёт сюда и в Telegram.</div>`;
     body = `<div class="flex flex-col gap-3">${body}</div>`;
   } else if (F.tab === "feed") {
-    const out = w.transfers.filter((t) => t.direction === "out" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
+    const out = w.transfers.filter((t) => t.direction === "out" && t.kind !== "deposit" && t.status === "completed").reduce((s, t) => s + t.amount, 0);
     body = `<div class="card px-4 pb-1 pt-3"><div class="flex justify-between text-[12px] muted"><span>Последние ${w.transfers.length} операций</span><span>списано ${fmtShort(out)}</span></div>
       ${w.transfers.map(txLine).join("") || `<p class="text-[13px] muted py-4">Переводов пока нет.</p>`}</div>`;
   } else body = rulesView(w);

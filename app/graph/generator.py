@@ -98,6 +98,7 @@ def generate(db: Session, seed: int = 42, now: datetime | None = None) -> dict:
         clients.append(c)
         client_acc.append(g.account(name, last4=l4, client_id=c.id))
     saule, aidar = clients[0], clients[1]
+    saule.deposit = 4_500_000  # savings: the "close the deposit and hand cash to a courier" scheme targets exactly this
     # The demo's trusted contact is already active (accepted earlier); Telegram is linked with /start CODE and no
     # phone check, since the presenter's real number differs from the demo one. Loans stay instant for the main
     # scenario ("take a loan, then transfer"); contacts added in the app confirm loans by default.

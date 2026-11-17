@@ -12,7 +12,7 @@ EXPAND_MIN_RISK = 40
 def _edges(db: Session) -> dict[tuple[int, int], dict]:
     agg: dict[tuple[int, int], dict] = {}
     for t in db.query(Transfer).filter(Transfer.status.in_(["completed", "rejected", "pending_relative", "cooling",
-                                                            "blocked"])):
+                                                            "blocked"]), Transfer.kind == "transfer"):
         e = agg.setdefault((t.from_account_id, t.to_account_id), {"count": 0, "amount": 0.0, "status": "completed"})
         e["count"] += 1
         e["amount"] += t.amount
@@ -40,7 +40,8 @@ def graph_view(db: Session, min_risk: float = 40) -> dict:
     edges = _edges(db)
     core = {aid for aid, a in accounts.items() if a.risk_score >= min_risk}
     # live operations the shield stopped are always shown (e.g. Saule -> Kaspi 4417)
-    flagged = db.query(Transfer).filter(Transfer.synthetic.is_(False), Transfer.status != "completed").all()
+    flagged = db.query(Transfer).filter(Transfer.synthetic.is_(False), Transfer.status != "completed",
+                                      Transfer.kind == "transfer").all()
     core |= {t.to_account_id for t in flagged}
     keep_edges = {k: v for k, v in edges.items()
                   if (k[0] in core or k[1] in core) and (accounts[k[0]].risk_score >= EXPAND_MIN_RISK

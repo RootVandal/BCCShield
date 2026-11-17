@@ -22,7 +22,7 @@ from app.graph import service as graph_service
 from app.graph.generator import SIGNAL_CARD
 from app.models import Account, CallSession, Client, Loan, Transfer, TrustedContact
 from app.risk.engine import find_or_create_recipient
-from app.schemas import (AnswerIn, CallStartIn, CallTextIn, ClientIn, ContactIn, DecisionIn, LanguageIn, LoanIn,
+from app.schemas import (AnswerIn, OperationIn, TelecomSignalIn, CallStartIn, CallTextIn, ClientIn, ContactIn, DecisionIn, LanguageIn, LoanIn,
                          RulesIn, ScenarioIn, ShieldIn, SignalIn, SimulateSignalIn, TransferIn)
 from app.security import admin_key, admin_key_from_env, check_admin, check_init_data, is_local, relative_key
 from app.ws import hub
@@ -421,6 +421,48 @@ async def make_transfer(client_id: int, body: TransferIn, db: Session = Depends(
     except ValueError as e:
         db.rollback()
         bad_request(e)
+
+
+@app.post("/api/clients/{client_id}/operations")
+async def make_operation(client_id: int, body: OperationIn, db: Session = Depends(get_db)):
+    """Cash withdrawal / early deposit closure through the same risk engine and family confirmation."""
+    c = get_client(db, client_id)
+    try:
+        return await service.create_operation(db, c, body.kind, body.amount, body.behavior,
+                                              body.answers.model_dump() if body.answers else None)
+    except ValueError as e:
+        db.rollback()
+        bad_request(e)
+
+
+@app.post("/api/clients/{client_id}/telecom-signal", dependencies=[Depends(check_admin)])
+async def telecom_signal(client_id: int, body: TelecomSignalIn | None = None, db: Session = Depends(get_db)):
+    """Demo stub for the National Bank's «Телеком Антифрод» pilot: the operator flags a suspicious call."""
+    c = get_client(db, client_id)
+    res = await service.telecom_signal(db, c, (body or TelecomSignalIn()).minutes)
+    tc = next(iter(contacts.active_contacts(db, c.id)), None)
+    alert = {"id": len(relative_alerts) + 1, "client_id": c.id, "client": c.name, "phone": c.phone,
+             "scheme": {"ru": "сигнал оператора связи", "kk": "байланыс операторының сигналы"}, "risk": 0.9,
+             "call_id": None, "at": datetime.now(), "relation": tc.relation if tc else None, "source": "telecom"}
+    relative_alerts.append(alert)
+    await hub.broadcast("relative_alert", alert)
+    await hub.broadcast("metrics", service.metrics(db))
+    return res
+
+
+_eval_cache: dict = {}
+
+
+@app.get("/api/eval")
+def recognition_quality():
+    """Honest numbers: the keyword layer run over a set of ordinary and scam conversations (app/eval.py)."""
+    if "data" not in _eval_cache:
+        try:
+            from app import eval as quality
+        except ImportError:
+            raise HTTPException(404, "Набор для замера ещё не добавлен")
+        _eval_cache["data"] = quality.evaluate()
+    return _eval_cache["data"]
 
 
 @app.get("/api/clients/{client_id}/bank-call-check")

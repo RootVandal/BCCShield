@@ -38,12 +38,19 @@ def test_main_demo_scenario():
             assert "relative_alert" in types
         assert c.get("/api/clients/1").json()["protection_mode"] == "on"
 
-        assert c.post("/api/clients/1/loans", json={"amount": 1_500_000}).status_code == 200
+        # the bank already knows a scammer is on the line: the loan is not handed out, the son decides
+        loan = c.post("/api/clients/1/loans", json={"amount": 1_500_000}).json()
+        assert loan["status"] == "pending_relative", loan
+        assert {"call_risk", "protection_mode"} <= {x["code"] for x in loan["reasons"]}
+        assert c.get("/api/clients/1").json()["balance"] == 2_300_000
+        assert c.post(f"/api/loans/{loan['id']}/decision", json={"decision": "reject"}, headers=RELATIVE).json()["status"] == "rejected"
+
         r = c.post("/api/clients/1/transfers", json={"bank": "Kaspi", "card": "4400430122334417",
-                                                     "amount": 3_500_000, "behavior": {"fill_seconds": 3}}).json()
+                                                     "amount": 2_000_000, "behavior": {"fill_seconds": 3}}).json()
         assert r["action"] == "pending_relative", r
         codes = {x["code"] for x in r["assessment"]["reasons"]}
-        assert {"recent_loan", "call_risk", "new_recipient", "risky_recipient"} <= codes
+        assert {"call_risk", "new_recipient", "risky_recipient"} <= codes and "recent_loan" not in codes
+        assert r["transfer"]["context"]["call_scheme"] == "safe_account"
         tid = r["transfer"]["id"]
 
         me = c.get("/api/relative/me", headers=RELATIVE).json()["wards"][0]
@@ -51,12 +58,12 @@ def test_main_demo_scenario():
 
         assert c.post(f"/api/transfers/{tid}/decision", json={"decision": "reject"}, headers=RELATIVE).json()["status"] == "rejected"
         after = c.get("/api/clients/1").json()
-        assert after["balance"] == 2_300_000 + 1_500_000  # money stays
+        assert after["balance"] == 2_300_000  # money stays, no loan taken
 
         signals = c.get("/api/antifraud/signals").json()
         assert signals and signals[0]["payload"]["card"] == "•• 4417"
         m = c.get("/api/metrics").json()
-        assert m["saved"] == 3_500_000 and m["stopped"] == 1
+        assert m["saved"] == 2_000_000 and m["stopped"] == 1
         kaspi_id = r["transfer"]["to"]["id"]
         acc = c.get(f"/api/graph/account/{kaspi_id}").json()
         assert acc["confirmed"] and acc["risk"] >= 85
