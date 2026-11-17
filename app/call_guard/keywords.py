@@ -12,6 +12,10 @@ CATEGORY_WEIGHTS = {
     "remote_access": 0.40,
     "urgency_secrecy": 0.15,
     "transfer_request": 0.20,
+    "telecom_pretext": 0.20,
+    "drop_accusation": 0.35,
+    "cash_courier": 0.40,
+    "relative_in_trouble": 0.35,
 }
 
 CATEGORY_LABELS = {
@@ -22,6 +26,10 @@ CATEGORY_LABELS = {
     "remote_access": {"ru": "Удалённый доступ", "kk": "Қашықтан қол жеткізу"},
     "urgency_secrecy": {"ru": "Срочность и секретность", "kk": "Асығыстық және құпиялылық"},
     "transfer_request": {"ru": "Просьба перевести/снять деньги", "kk": "Ақша аудару/шешу өтініші"},
+    "telecom_pretext": {"ru": "Легенда оператора связи", "kk": "Байланыс операторының аңызы"},
+    "drop_accusation": {"ru": "Обвинение в дропперстве", "kk": "Дропперлік деп айыптау"},
+    "cash_courier": {"ru": "Наличные курьеру / валюта", "kk": "Қолма-қол ақша курьерге / валюта"},
+    "relative_in_trouble": {"ru": "«Родственник в беде»", "kk": "«Туысқан қиын жағдайда»"},
 }
 
 # (phrase, category, weight override or None)
@@ -97,6 +105,57 @@ PHRASES: list[tuple[str, str, float | None]] = [
     ("внесите на карту", "transfer_request", 0.2),
     ("аударыңыз", "transfer_request", None),
     ("қолма-қол ақша шешіңіз", "transfer_request", 0.25),
+    # impersonation: agencies named in the 2026 multi-stage calls
+    ("киберполиция", "impersonation", 0.3),
+    ("афм", "impersonation", 0.3),
+    ("сотрудник egov", "impersonation", 0.3),
+    ("электронное правительство", "impersonation", 0.25),
+    ("киберполиция қызметкері", "impersonation", 0.3),
+    # loan_pressure: loans "being taken out" and lifting the credit self-ban
+    ("на вас оформляют займы", "loan_pressure", None),
+    ("снимите запрет на кредиты", "loan_pressure", None),
+    ("отключите стоп кредит", "loan_pressure", None),
+    # telecom_pretext: "your SIM expires", contract renewal, SMS-bombing "antispam"
+    ("срок действия сим-карты", "telecom_pretext", None),
+    ("срок действия sim-карты", "telecom_pretext", None),
+    ("сим-карта истекает", "telecom_pretext", None),
+    ("продление договора", "telecom_pretext", None),
+    ("номер будет заблокирован", "telecom_pretext", None),
+    ("оператор сотовой связи", "telecom_pretext", 0.15),
+    ("смс атака", "telecom_pretext", None),
+    ("услуга антиспам", "telecom_pretext", None),
+    ("сим-картаның мерзімі", "telecom_pretext", None),
+    ("нөміріңіз бұғатталады", "telecom_pretext", None),
+    # drop_accusation: "you are a money mule, a criminal case is opened"
+    ("дроппер", "drop_accusation", None),
+    ("уголовное дело", "drop_accusation", 0.3),
+    ("соучастие", "drop_accusation", 0.3),
+    ("соучастник", "drop_accusation", 0.3),
+    ("вы проходите как", "drop_accusation", 0.3),
+    ("қылмыстық іс", "drop_accusation", 0.3),
+    # cash_courier: cash to a courier "for safekeeping", buying currency, a cover story for the teller
+    ("передайте курьеру", "cash_courier", None),
+    ("курьер заберет", "cash_courier", None),
+    ("на хранение", "cash_courier", 0.3),
+    ("купите доллары", "cash_courier", None),
+    ("купите валюту", "cash_courier", None),
+    ("снимите все деньги", "cash_courier", None),
+    ("снимите с депозита", "cash_courier", 0.35),
+    ("кассиру скажите", "cash_courier", None),
+    ("скажите кассиру", "cash_courier", None),
+    ("курьерге беріңіз", "cash_courier", None),
+    ("доллар сатып алыңыз", "cash_courier", None),
+    # relative_in_trouble: a "relative" calling from someone else's number after an accident
+    ("попал в аварию", "relative_in_trouble", None),
+    ("попал в дтп", "relative_in_trouble", None),
+    ("сбил человека", "relative_in_trouble", None),
+    ("меня задержали", "relative_in_trouble", None),
+    ("с чужого номера", "relative_in_trouble", None),
+    ("телефон разбился", "relative_in_trouble", 0.25),
+    ("решить вопрос на месте", "relative_in_trouble", None),
+    ("карта следователя", "relative_in_trouble", None),
+    ("апатқа түстім", "relative_in_trouble", None),
+    ("бөтен нөмірден", "relative_in_trouble", None),
 ]
 
 # category combinations that make the call almost certainly a scam
@@ -108,6 +167,13 @@ COMBOS: list[tuple[set[str], float]] = [
     ({"impersonation", "loan_pressure"}, 0.72),
     ({"loan_pressure", "transfer_request"}, 0.70),
     ({"safe_account", "transfer_request"}, 0.85),
+    ({"telecom_pretext", "credentials"}, 0.75),  # operators never ask for SMS codes
+    ({"impersonation", "drop_accusation"}, 0.70),
+    ({"drop_accusation", "transfer_request"}, 0.80),
+    ({"drop_accusation", "cash_courier"}, 0.90),
+    ({"impersonation", "cash_courier"}, 0.88),
+    ({"relative_in_trouble", "transfer_request"}, 0.82),
+    ({"relative_in_trouble", "urgency_secrecy", "transfer_request"}, 0.90),
 ]
 
 _WORD_RE = re.compile(r"[\w-]+", re.UNICODE)

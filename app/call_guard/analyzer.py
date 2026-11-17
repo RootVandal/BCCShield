@@ -18,6 +18,7 @@ SCHEME_LABELS = {
     "safe_account": {"ru": "«безопасный счёт»", "kk": "«қауіпсіз шот»"},
     "fake_loan": {"ru": "«отмена кредита»", "kk": "«несиені тоқтату»"},
     "relative_in_trouble": {"ru": "«родственник в беде»", "kk": "«туысқан қиын жағдайда»"},
+    "telecom_egov": {"ru": "оператор → eGov → «вы дроппер»", "kk": "оператор → eGov → «сіз дропперсіз»"},
     "investment": {"ru": "«инвестиции»", "kk": "«инвестиция»"},
     "delivery": {"ru": "«доставка»", "kk": "«жеткізу»"},
     "other": {"ru": "социальная инженерия", "kk": "әлеуметтік инженерия"},
@@ -58,6 +59,10 @@ def level_of(score: float) -> str:
 
 
 def guess_scheme(categories: dict) -> str:
+    if "relative_in_trouble" in categories:
+        return "relative_in_trouble"
+    if "telecom_pretext" in categories or "drop_accusation" in categories:
+        return "telecom_egov"
     if "safe_account" in categories:
         return "safe_account"
     if "loan_pressure" in categories:
