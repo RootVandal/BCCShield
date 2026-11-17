@@ -32,7 +32,7 @@ def test_decision_requires_trusted_contact():
         assert c.get(f"/api/transfers/{tid}").json()["status"] == "pending_relative"
         ok = c.post(f"/api/transfers/{tid}/decision", json={"decision": "reject"}, headers=RELATIVE)
         assert ok.status_code == 200 and ok.json()["status"] == "rejected"
-        assert c.get(f"/api/transfers/{tid}").json()["decided_by"] == "relative_web"
+        assert c.get(f"/api/transfers/{tid}").json()["decided_by"] == "relative:1"
 
 
 def test_shield_off_and_protection_need_relative():
@@ -53,8 +53,9 @@ def test_admin_actions_and_inbox_are_locked():
                              ("post", "/api/transfers/1/false-positive")):
             assert getattr(c, method)(path).status_code == 403, path
             assert getattr(c, method)(path, headers={"X-Admin-Key": "wrong"}).status_code == 403, path
-        assert c.get("/api/relative/1/inbox").status_code == 403
-        assert c.get("/api/relative/1/inbox", headers=RELATIVE).status_code == 200
+        assert c.get("/api/relative/me").status_code == 403
+        assert c.get("/api/relative/me", headers={"X-Relative-Key": "0" * 32}).status_code == 403
+        assert c.get("/api/relative/me", headers=RELATIVE).status_code == 200
         links = c.get("/api/demo/links", headers=ADMIN).json()
         assert links["relative"].endswith(relative_key(1))
         # reading stays open for the demo

@@ -46,8 +46,8 @@ def test_main_demo_scenario():
         assert {"recent_loan", "call_risk", "new_recipient", "risky_recipient"} <= codes
         tid = r["transfer"]["id"]
 
-        inbox = c.get("/api/relative/1/inbox", headers=RELATIVE).json()
-        assert any(t["id"] == tid and t["status"] == "pending_relative" for t in inbox["transfers"])
+        me = c.get("/api/relative/me", headers=RELATIVE).json()["wards"][0]
+        assert any(t["id"] == tid and t["status"] == "pending_relative" for t in me["pending"]["transfers"])
 
         assert c.post(f"/api/transfers/{tid}/decision", json={"decision": "reject"}, headers=RELATIVE).json()["status"] == "rejected"
         after = c.get("/api/clients/1").json()

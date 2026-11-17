@@ -1,5 +1,18 @@
 // Shared helpers for all pages: API, WebSocket, formatting, i18n, small charts.
-const CLIENT_ID = 1;
+const DEMO_CLIENT_ID = 1; // Сауле Ахметова, the main demo client
+
+// The client this page shows: /client?c=7 opens another (e.g. a freshly created) account; remembered per browser.
+const CLIENT_ID = (() => {
+  const q = new URLSearchParams(location.search), fromUrl = parseInt(q.get("c"), 10);
+  if (location.pathname.startsWith("/client")) {
+    if (fromUrl > 0) { try { localStorage.setItem("bcc.clientId", String(fromUrl)); } catch (_) {} return fromUrl; }
+    try { const v = parseInt(localStorage.getItem("bcc.clientId"), 10); if (v > 0) return v; } catch (_) {}
+  }
+  return DEMO_CLIENT_ID;
+})();
+
+// Telegram Mini App: every request carries Telegram's signed initData, the server checks the signature.
+const TG = window.Telegram?.WebApp?.initData ? window.Telegram.WebApp : null;
 
 // Access keys from a personal link: ?key=… (presenter/analyst) and ?rk=… (trusted contact).
 // They are kept in this browser and removed from the address bar so they don't show on the projector.
@@ -19,6 +32,8 @@ async function api(path, opts = {}) {
   const init = { method: opts.method || (opts.body !== undefined ? "POST" : "GET"), headers: {} };
   if (KEYS.admin) init.headers["X-Admin-Key"] = KEYS.admin;
   if (KEYS.relative) init.headers["X-Relative-Key"] = KEYS.relative;
+  if (TG) init.headers["X-Telegram-Init-Data"] = TG.initData;
+  if (opts.method) init.method = opts.method;
   if (opts.body instanceof FormData) init.body = opts.body;
   else if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
   const res = await fetch(path, init);

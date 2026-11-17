@@ -15,7 +15,9 @@ import ipaddress
 import json
 import logging
 import secrets
+import time
 from pathlib import Path
+from urllib.parse import parse_qsl
 
 from fastapi import Header, HTTPException, Request
 
@@ -121,3 +123,30 @@ def require_relative(contact_id: int | None, key: str | None):
     if not is_relative(contact_id, key):
         raise HTTPException(403, "Это действие доступно только доверенному лицу: откройте страницу родственника "
                                  "по персональной ссылке (?rk=…) или ответьте в Telegram-боте.")
+
+
+def check_init_data(init_data: str | None, bot_token: str, max_age: int = 24 * 3600, now: float | None = None) -> dict | None:
+    """Validate Telegram Mini App initData (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app).
+
+    Returns the Telegram user ({"id": ..., "first_name": ...}) or None. The signature is an HMAC made with the bot
+    token, so only Telegram can produce it: a page cannot pretend to be someone else's Telegram account.
+    """
+    if not init_data or not bot_token:
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
+    except ValueError:
+        return None
+    received = pairs.pop("hash", "")
+    check = "\n".join(f"{k}={v}" for k, v in sorted(pairs.items()))
+    secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+    expected = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
+    if not received or not hmac.compare_digest(received, expected):
+        return None
+    try:
+        if (now or time.time()) - int(pairs.get("auth_date", "0")) > max_age:
+            return None
+        user = json.loads(pairs.get("user", "null"))
+    except ValueError:
+        return None
+    return user if isinstance(user, dict) and isinstance(user.get("id"), int) else None

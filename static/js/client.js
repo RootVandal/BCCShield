@@ -2,7 +2,7 @@
 const T = {
   ru: {
     hello: "Здравствуйте", balance: "Баланс", frozen: "заморожено до решения", transfer: "Перевод", loan: "Кредит",
-    callGuard: "Защита звонка", shield: "Щит", history: "История", all: "Все", back: "Назад",
+    callGuard: "Защита звонка", shield: "Семейный щит", history: "История", all: "Все", back: "Назад",
     protectionOn: "Режим защиты включён: переводы — только с подтверждением", byCard: "По карте", byPhone: "По телефону",
     bank: "Банк получателя", card: "Номер карты", phone: "Телефон", amount: "Сумма", send: "Перевести",
     templates: "Шаблоны для демо", shieldOnNote: "Семейный щит включён", loanTitle: "Быстрый кредит",
@@ -31,10 +31,13 @@ const T = {
     tgLink: "Подключить Telegram родственника", shieldToggle: "Семейный щит", shieldOffNote: "Отключение — только с подтверждением доверенного лица или через 24 часа.",
     protection: "Режим защиты", on: "включён", off: "выключен", language: "Язык",
     loanWarn: "Если по телефону вас просят оформить кредит — это мошенники. Банк так не делает.",
+    family: "Семейный щит", trustedList: "Доверенные лица", addTrusted: "Добавить доверенное лицо",
+    familyEmpty: "Добавьте близкого человека. Он будет видеть ваши переводы и подтверждать крупные и подозрительные.",
+    loanSent: "Заявка отправлена на подтверждение",
   },
   kk: {
     hello: "Сәлеметсіз бе", balance: "Теңгерім", frozen: "шешімге дейін тоқтатылған", transfer: "Аударым", loan: "Несие",
-    callGuard: "Қоңырауды қорғау", shield: "Қалқан", history: "Тарих", all: "Барлығы", back: "Артқа",
+    callGuard: "Қоңырауды қорғау", shield: "Отбасы қалқаны", history: "Тарих", all: "Барлығы", back: "Артқа",
     protectionOn: "Қорғау режимі қосулы: аударымдар тек растаумен", byCard: "Карта бойынша", byPhone: "Телефон бойынша",
     bank: "Алушының банкі", card: "Карта нөмірі", phone: "Телефон", amount: "Сома", send: "Аудару",
     templates: "Демо үлгілері", shieldOnNote: "Отбасылық қалқан қосулы", loanTitle: "Жылдам несие",
@@ -63,6 +66,9 @@ const T = {
     tgLink: "Туысқанның Telegram-ын қосу", shieldToggle: "Отбасылық қалқан", shieldOffNote: "Өшіру — тек сенімді адамның растауымен немесе 24 сағаттан кейін.",
     protection: "Қорғау режимі", on: "қосулы", off: "өшірулі", language: "Тіл",
     loanWarn: "Телефон арқылы несие рәсімдеуді сұраса — бұл алаяқтар. Банк олай істемейді.",
+    family: "Отбасы қалқаны", trustedList: "Сенімді адамдар", addTrusted: "Сенімді адам қосу",
+    familyEmpty: "Жақын адамыңызды қосыңыз. Ол аударымдарыңызды көріп, ірі және күдікті аударымдарды растайды.",
+    loanSent: "Өтінім растауға жіберілді",
   },
 };
 
@@ -76,6 +82,9 @@ const S = {
 };
 const t = (k) => T[S.lang][k] ?? T.ru[k] ?? k;
 const reasonText = (r) => (S.lang === "kk" ? r.kk : r.ru) || r.ru;
+const initials = (name) => (name || "?").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const activeContacts = () => (S.client?.contacts || []).filter((c) => c.status === "active");
+const contactNames = () => activeContacts().map((c) => `${c.name} (${c.relation})`).join(", ");
 
 const ICONS = {
   transfer: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>`,
@@ -116,12 +125,12 @@ function renderHome() {
   const callLive = !!S.call;
   return `<div class="px-4 pb-8 fade-in">
     <div class="flex items-center justify-between pt-1 pb-4">
-      <div class="flex items-center gap-3"><div class="avatar" style="background:var(--accent-dim);color:var(--accent)">СА</div>
+      <div class="flex items-center gap-3"><div class="avatar" style="background:var(--accent-dim);color:var(--accent)">${esc(initials(c.name))}</div>
         <div><div class="text-[12px] muted">${t("hello")},</div><div class="text-[15px] font-semibold">${esc(first)}</div></div></div>
       ${langToggle()}
     </div>
     ${c.protection_mode === "on" ? `<button onclick="go('settings')" class="w-full text-left mb-3 px-3 py-2.5 rounded-xl text-[12.5px] flex gap-2 items-start" style="background:var(--danger-dim);color:#ffb1a8">
-      <span class="mt-0.5">${ICONS.shield.replace("<svg", '<svg width="14" height="14"')}</span><span>${t("protectionOn")}: ${esc(c.trusted_contact?.name || "")}</span></button>` : ""}
+      <span class="mt-0.5">${ICONS.shield.replace("<svg", '<svg width="14" height="14"')}</span><span>${t("protectionOn")}: ${esc(contactNames() || "—")}</span></button>` : ""}
     <div class="bank-card">
       <div class="relative z-[1] flex justify-between items-start"><span class="text-[12px] text-white/70">${t("balance")}</span>
         <span class="text-[11px] text-white/60 mono">BCC Shield</span></div>
@@ -248,35 +257,108 @@ function renderHistory() {
   return `${header(t("history"))}<div class="px-4 pb-8 fade-in">${S.transfers.map(txRow).join("")}</div>`;
 }
 
+const STATUS_TC = { active: ["low", "подключён"], invited: ["medium", "ждёт принятия"], approval: ["medium", "ждёт разрешения"] };
+
+function contactCard(tc) {
+  const [cls, label] = STATUS_TC[tc.status] || ["neutral", tc.status];
+  const r = tc.rules, bot = S.cfg.telegram_bot_username;
+  const firstActive = activeContacts()[0];
+  const rules = [`от ${fmt(r.threshold)}`, r.confirm_new && "новые получатели", r.confirm_loans && "кредиты"].filter(Boolean).join(" · ");
+  let body = "";
+  if (tc.status === "approval") {
+    body = `<div class="text-[12.5px] muted mt-3 leading-relaxed">Добавить нового человека может разрешить только ${esc(firstActive ? firstActive.name : "текущее доверенное лицо")}: мы отправили ему запрос. Так мошенник не сможет «добавить сотрудника банка».</div>`;
+  } else if (tc.link_code) {
+    const deep = bot ? `https://t.me/${encodeURIComponent(bot)}?start=${encodeURIComponent(tc.link_code)}` : "";
+    body = `<div class="mt-3 pt-3 border-t hair"><div class="text-[12.5px] muted">${tc.status === "invited" ? `Отправьте ${esc(tc.name)} приглашение — он примет его в Telegram и подтвердит свой номер:` : "Подключите Telegram:"}</div>
+      ${deep ? `<a class="btn btn-sm btn-accent btn-block mt-2" target="_blank" rel="noopener" href="${deep}">Открыть @${esc(bot)}</a>
+        <div class="text-[11.5px] muted mt-2 break-all select-all mono">${esc(deep)}</div>` : `<div class="text-[12px] faint mt-1">Бот выключен (нет TELEGRAM_BOT_TOKEN).</div>`}
+      <div class="mono text-[12.5px] mt-2 card-2 px-3 py-2 select-all">/start ${esc(tc.link_code)}</div>
+      ${tc.status === "invited" ? `<a class="link text-[12px] mt-2 inline-block" target="_blank" href="/relative?invite=${encodeURIComponent(tc.link_code)}">Принять в браузере (демо) ↗</a>` : ""}</div>`;
+  }
+  const cancel = tc.status !== "active" ? `<button class="btn btn-sm btn-ghost" onclick="cancelContact(${tc.id}, this)" aria-label="Отменить">✕</button>` : "";
+  return `<div class="card p-4 fade-in"><div class="flex items-center gap-3"><div class="avatar" style="background:${tc.status === "active" ? "var(--accent-dim)" : "var(--surface-3)"};color:${tc.status === "active" ? "var(--accent)" : "var(--muted)"}">${esc(initials(tc.name))}</div>
+      <div class="flex-1 min-w-0"><div class="text-[14px] font-medium truncate">${esc(tc.name)} <span class="muted font-normal">(${esc(tc.relation)})</span></div>
+        <div class="text-[12px] muted mono">${esc(tc.phone)}</div></div><span class="pill ${cls}">${label}</span>${cancel}</div>
+    <div class="text-[12px] muted mt-3">Подтверждает: <span class="text-[color:var(--text)]">${esc(rules)}</span></div>
+    <div class="text-[12px] muted mt-1">Видит: <span class="text-[color:var(--text)]">${r.notify_all ? "все переводы" : "только рискованные"}</span>${tc.status === "active" ? ` · ${tc.telegram_linked ? "Telegram ✓" : "веб-кабинет"}` : ""}</div>
+    ${body}</div>`;
+}
+
 function renderSettings() {
-  const c = S.client, tc = c.trusted_contact;
-  return `${header(t("settings"))}<div class="px-4 pb-8 fade-in flex flex-col gap-3">
+  const c = S.client, list = c.contacts || [];
+  return `${header(t("family"))}<div class="px-4 pb-8 fade-in flex flex-col gap-3">
     <div class="card p-4 flex items-center justify-between gap-3"><div><div class="text-[14px] font-medium">${t("shieldToggle")}</div>
       <div class="text-[12px] muted mt-0.5">${t("shieldOffNote")}</div></div>
       <button class="switch ${c.shield_enabled ? "on" : ""}" onclick="toggleShield()" aria-label="${t("shieldToggle")}"></button></div>
     <div id="shield-msg"></div>
-    <div class="card p-4"><div class="label mb-3">${t("trusted")}</div>
-      ${tc ? `<div class="flex items-center gap-3"><div class="avatar">${esc(tc.name[0])}</div><div class="flex-1"><div class="text-[14px]">${esc(tc.name)} <span class="muted">(${esc(tc.relation)})</span></div>
-        <div class="text-[12px] muted mono">${esc(tc.phone)}</div></div></div>
-        <div class="flex justify-between text-[13px] mt-4"><span class="muted">${t("threshold")}</span><span class="num">${fmt(tc.threshold)}</span></div>
-        <div class="mt-4 pt-4 border-t hair"><div class="text-[13px]">${t("tgLink")}</div>
-          <div class="text-[12px] muted mt-1">${S.cfg.telegram_enabled ? "Отправьте боту команду:" : "Бот выключен (нет TELEGRAM_BOT_TOKEN). Команда для бота:"}</div>
-          <div class="mono text-[13px] mt-2 card-2 px-3 py-2 select-all">/start ${esc(tc.link_code)}</div>
-          ${S.cfg.telegram_bot_username && !tc.telegram_linked ? `<a class="btn btn-sm btn-pale mt-2" target="_blank" rel="noopener"
-            href="https://t.me/${encodeURIComponent(S.cfg.telegram_bot_username)}?start=${encodeURIComponent(tc.link_code)}">Открыть @${esc(S.cfg.telegram_bot_username)}</a>` : ""}
-          <div class="text-[11.5px] faint mt-2">Код одноразовый: после подключения перепривязать Telegram с этого телефона нельзя.</div>
-          <div class="text-[12px] mt-2 ${tc.telegram_linked ? "text-[color:var(--accent)]" : "faint"}">${tc.telegram_linked ? "✓ Telegram подключён" : "Telegram не подключён · работает веб-страница родственника"}</div></div>`
-        : `<p class="muted text-[13px]">—</p>`}</div>
-    <div class="card p-4 flex justify-between items-center"><span class="text-[14px]">${t("protection")}</span>
+    <div class="flex items-center justify-between mt-2"><span class="label">${t("trustedList")}</span><span class="text-[12px] muted">${list.length}/5</span></div>
+    ${list.length ? list.map(contactCard).join("") : `<div class="card p-5 text-center"><div class="w-14 h-14 mx-auto rounded-2xl grid place-items-center" style="background:var(--surface-3);color:var(--muted)">${ICONS.shield.replace("<svg", '<svg width="26" height="26"')}</div>
+      <p class="text-[13px] muted mt-3 leading-relaxed">${t("familyEmpty")}</p></div>`}
+    ${list.length < 5 ? `<button class="btn btn-accent btn-block btn-lg" onclick="go('addContact')">＋ ${t("addTrusted")}</button>` : ""}
+    <div class="card p-4 flex justify-between items-center mt-2"><span class="text-[14px]">${t("protection")}</span>
       <span class="pill ${c.protection_mode === "on" ? "high" : "low"}">${c.protection_mode === "on" ? t("on") : t("off")}</span></div>
     <div class="card p-4 flex justify-between items-center"><span class="text-[14px]">${t("language")}</span>${langToggle()}</div>
   </div>`;
 }
 
+const REL = ["сын", "дочь", "внук", "внучка", "брат", "сестра", "муж", "жена", "друг", "другое"];
+const NEW_TC = () => ({ name: "", relation: "сын", phone: "", threshold: 100000, confirm_new: true, confirm_loans: true, notify_all: true });
+
+function renderAddContact() {
+  const f = (S.newTc ||= NEW_TC());
+  const toggle = (k, label, note) => `<div class="flex items-center justify-between gap-3 py-3 border-b hair"><div><div class="text-[14px]">${label}</div>${note ? `<div class="text-[11.5px] muted mt-0.5">${note}</div>` : ""}</div>
+    <button type="button" class="switch ${f[k] ? "on" : ""}" onclick="S.newTc.${k}=!S.newTc.${k};render()" aria-label="${label}"></button></div>`;
+  return `<div class="flex items-center gap-2 px-4 pt-2 pb-3 sticky top-0 z-10 bg-[#0d0d0c]/90 backdrop-blur">
+      <button class="w-9 h-9 grid place-items-center rounded-full hover:bg-white/5" onclick="go('settings')" aria-label="${t("back")}">${ICONS.back}</button>
+      <h2 class="text-[17px] font-semibold">${t("addTrusted")}</h2></div>
+    <form class="px-4 pb-8 fade-in flex flex-col gap-3" onsubmit="saveContact(event)">
+      <div><div class="label mb-1.5">Имя</div><input id="tc-name" class="input h-11 text-[15px]" required minlength="2" placeholder="Например, Айдар Ахметов" value="${esc(f.name)}" oninput="S.newTc.name=this.value"></div>
+      <div><div class="label mb-1.5">Кем приходится</div><div class="flex flex-wrap gap-1.5">${REL.map((r) => `<button type="button" class="chip ${f.relation === r ? "on" : ""}" onclick="S.newTc.relation='${r}';render()">${r}</button>`).join("")}</div></div>
+      <div><div class="label mb-1.5">Телефон (его номер в Telegram)</div><input id="tc-phone" class="input h-11 text-[15px] mono" required inputmode="tel" placeholder="+7 701 000 00 00" value="${esc(f.phone)}" oninput="S.newTc.phone=this.value"></div>
+      <div class="card p-4 mt-1"><div class="label">Что подтверждает</div>
+        <div class="py-3 border-b hair"><div class="text-[14px]">Переводы от суммы</div>
+          <div class="flex gap-1.5 mt-2">${[50000, 100000, 200000, 500000].map((v) => `<button type="button" class="chip ${f.threshold === v ? "on" : ""}" onclick="S.newTc.threshold=${v};render()">${fmtShort(v)}</button>`).join("")}</div></div>
+        ${toggle("confirm_new", "Переводы новым получателям", "Мошенники почти всегда просят перевести «на новый счёт»")}
+        ${toggle("confirm_loans", "Кредиты и займы", "Кредит по просьбе звонящего — частая схема")}
+        <div class="label mt-4">Что видит</div>
+        ${toggle("notify_all", "Все переводы в реальном времени", "Обычные платежи проходят сразу, он просто видит их")}</div>
+      <p class="text-[11.5px] faint leading-relaxed">Он примет приглашение в Telegram и подтвердит, что номер его. Ослабить правила или удалить доверенное лицо можно только с его согласия.</p>
+      <button class="btn btn-accent btn-block btn-lg" type="submit" id="tc-save">Отправить приглашение</button>
+      <div id="tc-err"></div></form>`;
+}
+
+async function saveContact(e) {
+  e.preventDefault();
+  const btn = $("#tc-save");
+  btn.disabled = true;
+  try {
+    const tc = await api(`/api/clients/${CLIENT_ID}/contacts`, { body: S.newTc });
+    S.newTc = null;
+    S.client = await api(`/api/clients/${CLIENT_ID}`);
+    go("settings");
+    toast(tc.status === "approval" ? `⏳ Нужно разрешение доверенного лица — запрос отправлен` : `✉️ Приглашение для ${esc(tc.name)} готово`, "neutral", 4500);
+  } catch (err) {
+    $("#tc-err").innerHTML = `<div class="card-2 px-4 py-3 text-[13px]" style="border-color:rgba(255,92,77,.4);color:#ffb1a8">${esc(err.message)}</div>`;
+    btn.disabled = false;
+  }
+}
+
+async function cancelContact(id, btn) {
+  btn.disabled = true;
+  try { await api(`/api/clients/${CLIENT_ID}/contacts/${id}`, { method: "DELETE" }); S.client = await api(`/api/clients/${CLIENT_ID}`); render(); }
+  catch (err) { toast(esc(err.message), "danger"); btn.disabled = false; }
+}
+
 function render() {
   if (!S.client) return;
-  const screens = { home: renderHome, transfer: renderTransfer, loan: renderLoan, call: renderCall, history: renderHistory, settings: renderSettings };
-  $("#screen").innerHTML = (screens[S.screen] || renderHome)();
+  const screens = { home: renderHome, transfer: renderTransfer, loan: renderLoan, call: renderCall, history: renderHistory, settings: renderSettings,
+    addContact: renderAddContact };
+  let html = (screens[S.screen] || renderHome)();
+  // Live updates re-render the same screen many times a second: play the appear animation only on a new screen,
+  // otherwise every WebSocket event restarts it and the screen flashes empty.
+  if (S.screen === S.shownScreen) html = html.replace(/\bfade-in\b/g, "");
+  S.shownScreen = S.screen;
+  $("#screen").innerHTML = html;
   if (S.screen === "call") { renderScenarios(); updateCallView(); }
   if (S.screen === "transfer") bindTransferForm();
 }
@@ -371,7 +453,7 @@ function showPaused(tx) {
     <div class="w-14 h-14 rounded-2xl grid place-items-center" style="background:var(--warn-dim);color:var(--warn)">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg></div>
     <h2 class="text-[23px] leading-tight font-semibold mt-5">${t("pausedTitle")}</h2>
-    ${toRelative ? `<p class="text-[14px] muted mt-2">${t("pausedSent")} <span class="text-[color:var(--text)]">${esc(tc?.name || "")} (${esc(tc?.relation || "")})</span>.</p>` : ""}
+    ${toRelative ? `<p class="text-[14px] muted mt-2">${t("pausedSent")} <span class="text-[color:var(--text)]">${esc(contactNames())}</span>.</p>` : ""}
     <div class="card p-4 mt-5"><div class="flex justify-between text-[13px]"><span class="muted">${t("amount")}</span><span class="num font-semibold">${fmt(tx.amount)}</span></div>
       <div class="flex justify-between text-[13px] mt-2"><span class="muted">→</span><span>${esc(tx.to.bank)} ${esc(tx.to.card)}</span></div>
       <div class="flex justify-between text-[13px] mt-2"><span class="muted">${t("pausedCooling")}</span><span class="num mono" id="cd">—</span></div></div>
@@ -471,8 +553,9 @@ async function submitTransfer(prev) {
 async function takeLoan(btn) {
   btn.disabled = true;
   try {
-    await api(`/api/clients/${CLIENT_ID}/loans`, { body: { amount: S.loanAmount } });
-    showResult("ok", t("loanDone"), t("loanNote"), S.loanAmount);
+    const loan = await api(`/api/clients/${CLIENT_ID}/loans`, { body: { amount: S.loanAmount } });
+    if (loan.status === "pending_relative") showResult("ok", t("loanSent"), `${esc(contactNames())}. Деньги поступят после одобрения.`, S.loanAmount);
+    else showResult("ok", t("loanDone"), t("loanNote"), S.loanAmount);
   } catch (e) { toast(esc(e.message), "danger"); }
   btn.disabled = false;
 }
@@ -599,6 +682,9 @@ function onEvent(type, d) {
     return;
   }
   if (type === "client_warning" && d.client_id === CLIENT_ID) toast("⚠️ " + esc(S.lang === "kk" ? d.kk : d.ru), "danger", 9000);
+  if (type === "loan" && d.client_id === CLIENT_ID && d.decided_by) {
+    toast(d.status === "approved" ? `✅ Кредит ${fmt(d.amount)} одобрен и зачислен` : `❌ Кредит ${fmt(d.amount)} отклонён доверенным лицом`, d.status === "approved" ? "neutral" : "danger", 6000);
+  }
 }
 
 async function init() {

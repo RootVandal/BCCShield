@@ -30,7 +30,7 @@ function renderMetrics(flash) {
     ["Recall графа", (m.recall ?? 0).toFixed(2), "r"],
     ["Ложные паузы", pct(m.false_pause_rate || 0), "fp"],
   ];
-  $("#metrics").innerHTML = tiles.map(([l, v, k, c]) => `<div class="metric ${flash === k ? "flash" : ""}"><div class="label truncate">${l}</div>
+  $("#metrics").innerHTML = tiles.map(([l, v, k, c]) => `<div class="metric ${flash === k ? "flash" : ""}"><div class="label leading-snug">${l}</div>
     <div class="v num" ${c ? `style="color:${c}"` : ""}>${v}</div></div>`).join("");
 }
 async function loadMetrics(flash) {
@@ -221,7 +221,7 @@ function clearHighlight() {
 async function highlightFromVictim() {
   // The demo victim is Saule; if she has a rejected transfer, show that chain, otherwise the riskiest victim chain.
   const s = Object.values(A.nodeMap).find((n) => n.client === "Сауле Ахметова");
-  const rejected = A.feed.find((t) => t.status === "rejected" && t.from.client_id === CLIENT_ID);
+  const rejected = A.feed.find((t) => t.status === "rejected" && t.from.client_id === DEMO_CLIENT_ID);
   if (rejected) return openAccount(rejected.to.id, true);
   if (s && A.edges.get().some((e) => e.from === s.id && e.base === "#ff5c4d")) return highlightChain(s.id);
   const victim = Object.values(A.nodeMap).filter((n) => n.victim).sort((a, b) => b.risk - a.risk)[0];
@@ -263,7 +263,7 @@ function onEvent(type, d) {
   if (type === "transfer") upsertFeed(d);
   if (type === "call_started" || type === "call_update") {
     const c = A.calls[d.call_id] || {};
-    A.calls[d.call_id] = { ...c, ...d, client: c.client || (d.client_id === CLIENT_ID ? "Сауле Ахметова" : null),
+    A.calls[d.call_id] = { ...c, ...d, client: c.client || (d.client_id === DEMO_CLIENT_ID ? "Сауле Ахметова" : null),
       matched_phrases: d.matches ? [...new Set([...(c.matched_phrases || []), ...d.matches.map((m) => m.phrase)])] : d.matched_phrases || c.matched_phrases,
       scheme: d.scheme_label && d.risk >= 0.5 ? d.scheme_label.ru : c.scheme };
     renderCalls();
@@ -280,7 +280,7 @@ async function init() {
     <span class="pill ${cfg.telegram_enabled ? "low" : "neutral"}">${cfg.telegram_enabled ? "Telegram on" : "Telegram off"}</span>`;
   const [feed, calls] = await Promise.all([api("/api/transfers"), api("/api/calls/active")]);
   A.feed = feed;
-  calls.forEach((c) => (A.calls[c.call_id] = { ...c, client: c.client_id === CLIENT_ID ? "Сауле Ахметова" : null }));
+  calls.forEach((c) => (A.calls[c.call_id] = { ...c, client: c.client_id === DEMO_CLIENT_ID ? "Сауле Ахметова" : null }));
   renderFeed(); renderCalls(); loadMetrics(); loadJournal();
   $("#detail").innerHTML = `<div class="text-[13px] muted leading-relaxed">Выберите операцию в ленте или узел графа.<br><br>
     <span class="faint">Граф строится по синтетическим переводам за 30 дней: ~430 счетов, ~5 300 переводов, 3 дроп-сети. Узлы с риском ≥ 60 считаются дропперами. Внешние карты других банков показаны серыми прямоугольниками.</span></div>`;

@@ -31,7 +31,7 @@
       <h1 class="hero-title mt-5">Защита от мошенников,<br>которые звонят «из&nbsp;банка»</h1>
 
       <nav class="w-full max-w-[300px] mt-7 flex flex-col gap-2.5" aria-label="Роли демо">
-        <a class="role primary" href="/client" target="_blank" rel="noopener">
+        <a class="role primary" href="/client?c=1" target="_blank" rel="noopener">
           <span class="dot"></span>
           <span>Открыть как клиент · Сауле</span>
         </a>
@@ -43,6 +43,16 @@
           <span>Аналитик антифрода</span><span class="k">граф</span>
           <svg class="arr" viewBox="0 0 16 16" fill="none"><path d="M5 11 11 5M6 5h5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </a>
+        <button class="role secondary" id="new-open" type="button">
+          <span>＋ Новый клиент</span><span class="k">с нуля</span>
+        </button>
+        <form id="new-form" class="hidden flex-col gap-2 text-left card p-3" onsubmit="createClient(event)">
+          <div class="text-[12px] muted leading-snug">Чистый аккаунт без доверенных лиц: покажите, как клиент добавляет близкого и тот принимает приглашение.</div>
+          <input class="input h-10 text-[14px]" id="new-name" required minlength="2" value="Гульнар Ибраева" aria-label="Имя">
+          <div class="flex gap-2"><input class="input h-10 text-[14px]" id="new-age" type="number" min="18" max="110" value="71" aria-label="Возраст">
+            <button class="btn btn-pale h-10 flex-none" type="submit" id="new-go">Создать</button></div>
+          <div id="new-err" class="text-[12px]" style="color:#ffb1a8"></div>
+        </form>
       </nav>
 
       <p class="mt-5 text-[11px] leading-[1.55] faint max-w-[290px]">
@@ -76,6 +86,17 @@
       document.querySelector('a.role[href="/relative"]').href = l.relative;
       document.querySelector('a.role[href="/analyst"]').href = l.analyst;
     }).catch(() => {});
+    $("#new-open").addEventListener("click", () => { $("#new-open").classList.add("hidden"); $("#new-form").classList.remove("hidden"); $("#new-form").classList.add("flex"); $("#new-name").focus(); });
+    async function createClient(e) {
+      e.preventDefault();
+      $("#new-go").disabled = true; $("#new-err").textContent = "";
+      try {
+        const c = await api("/api/clients", { body: { name: $("#new-name").value, age: +$("#new-age").value || 70 } });
+        window.open(`/client?c=${c.id}`, "_blank", "noopener");
+        $("#new-err").style.color = "var(--accent)"; $("#new-err").textContent = `Создан аккаунт №${c.id}: открыт в новой вкладке`;
+      } catch (err) { $("#new-err").style.color = "#ffb1a8"; $("#new-err").textContent = err.message; }
+      $("#new-go").disabled = false;
+    }
     $("#reset").addEventListener("click", reset);
     $("#reset").addEventListener("keydown", (e) => e.key === "Enter" && reset());
   </script>

@@ -24,6 +24,34 @@ def get_db():
         db.close()
 
 
+# Columns added after the first release: existing demo databases (yours, the server's) get them on start.
+# Values for old rows keep the old behaviour (the seeded contact stays active and is not phone-checked).
+UPGRADES = {
+    "trusted_contacts": {
+        "status": "VARCHAR(16) DEFAULT 'active'", "confirm_new": "BOOLEAN DEFAULT 1", "confirm_loans": "BOOLEAN DEFAULT 0",
+        "notify_all": "BOOLEAN DEFAULT 1", "verify_phone": "BOOLEAN DEFAULT 0", "created_at": "DATETIME",
+    },
+    "loans": {"status": "VARCHAR(16) DEFAULT 'approved'", "decided_by": "VARCHAR(32)"},
+}
+
+
+def upgrade_schema() -> list[str]:
+    from sqlalchemy import inspect, text
+
+    added = []
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table, cols in UPGRADES.items():
+            if not insp.has_table(table):
+                continue
+            have = {c["name"] for c in insp.get_columns(table)}
+            for col, ddl in cols.items():
+                if col not in have:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+                    added.append(f"{table}.{col}")
+    return added
+
+
 def reset_db():
     from app import models  # noqa: F401  (register tables)
 

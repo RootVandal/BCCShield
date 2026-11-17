@@ -14,17 +14,17 @@ from app import seed as seed_mod
 from app.antifraud import mock_center
 from app.call_guard import analyzer, scenarios, stt
 from app.config import BASE_DIR, settings
-from app.db import SessionLocal, engine, get_db
-from app.family import service, telegram_bot
-from app.family.linking import ensure_strong_codes
+from app.db import SessionLocal, engine, get_db, upgrade_schema
+from app.family import contacts, service, telegram_bot
+from app.family.linking import ensure_strong_codes, transfer_client
 from app.graph import scoring
 from app.graph import service as graph_service
 from app.graph.generator import SIGNAL_CARD
-from app.models import Account, CallSession, Client, Transfer, TrustedContact
+from app.models import Account, CallSession, Client, Loan, Transfer, TrustedContact
 from app.risk.engine import find_or_create_recipient
-from app.schemas import (AnswerIn, CallStartIn, CallTextIn, DecisionIn, LanguageIn, LoanIn, ScenarioIn, ShieldIn,
-                         SignalIn, SimulateSignalIn, TransferIn)
-from app.security import admin_key, admin_key_from_env, check_admin, is_relative, relative_key, require_relative
+from app.schemas import (AnswerIn, CallStartIn, CallTextIn, ClientIn, ContactIn, DecisionIn, LanguageIn, LoanIn,
+                         RulesIn, ScenarioIn, ShieldIn, SignalIn, SimulateSignalIn, TransferIn)
+from app.security import admin_key, admin_key_from_env, check_admin, check_init_data, is_local, relative_key
 from app.ws import hub
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -72,10 +72,13 @@ async def lifespan(app: FastAPI):
     if not inspect(engine).has_table("clients"):
         log.info("База пуста — создаю демо-данные")
         seed_mod.seed()
+    added = upgrade_schema()
+    if added:
+        log.info("База обновлена: добавлены поля %s", ", ".join(added))
     with SessionLocal() as db:
         if ensure_strong_codes(db):
             log.info("Коды привязки Telegram заменены на одноразовые")
-        tc = db.query(TrustedContact).filter_by(client_id=1).first()
+        tc = next(iter(contacts.active_contacts(db, 1)), None)
     base = settings.public_url or f"http://localhost:{settings.port}"
     log.info("Ключ администратора демо%s: %s", " (из ADMIN_KEY)" if admin_key_from_env() else " (data/secrets.json)",
              admin_key())
@@ -103,7 +106,7 @@ def page(name: str):
 
 
 for route, file in {"/": "index.html", "/client": "client.html", "/relative": "relative.html",
-                    "/analyst": "analyst.html"}.items():
+                    "/analyst": "analyst.html", "/tg": "tg.html"}.items():
     app.get(route, include_in_schema=False)(page(file))
 
 
@@ -145,22 +148,39 @@ async def reset_demo():
 
 
 @app.get("/api/demo/links", dependencies=[Depends(check_admin)])
-def demo_links(db: Session = Depends(get_db)):
+def demo_links(client_id: int = 1, db: Session = Depends(get_db)):
     """Personal links for the presenter: shown on the start page only to admin / localhost."""
-    tc = db.query(TrustedContact).filter_by(client_id=1).first()
+    tc = next(iter(contacts.active_contacts(db, client_id)), None)
     return {"relative": f"/relative?rk={relative_key(tc.id)}" if tc else "/relative",
             "analyst": f"/analyst?key={admin_key()}"}
 
 
-def trusted_of(db: Session, client_id: int) -> TrustedContact | None:
-    return db.query(TrustedContact).filter_by(client_id=client_id).first()
+# --- who is calling: trusted contact (web key or Telegram Mini App) ---------------------------------------------
+def relative_ident(x_relative_key: str | None = Header(default=None),
+                   x_telegram_init_data: str | None = Header(default=None),
+                   db: Session = Depends(get_db)) -> list[TrustedContact]:
+    """Active trusted contacts the caller proves to be: a personal ?rk= key, or a signed Telegram Mini App session."""
+    tc = contacts.by_key(db, x_relative_key)
+    if tc:
+        return [tc]
+    user = check_init_data(x_telegram_init_data, settings.telegram_bot_token)
+    return contacts.by_chat(db, user["id"]) if user else []
 
 
-def relative_or_admin(request, db: Session, client_id: int, rk: str | None, ak: str | None):
-    tc = trusted_of(db, client_id)
-    if tc and is_relative(tc.id, rk):
-        return
+def acting_for(ident: list[TrustedContact], client_id: int | None) -> TrustedContact:
+    me = next((c for c in ident if c.client_id == client_id), None)
+    if not me:
+        raise HTTPException(403, "Это действие доступно только доверенному лицу этого клиента: откройте кабинет по "
+                                 "личной ссылке (?rk=…) или из Telegram-бота.")
+    return me
+
+
+def relative_or_admin(request: Request, ident: list[TrustedContact], client_id: int, ak: str | None) -> str:
+    me = next((c for c in ident if c.client_id == client_id), None)
+    if me:
+        return f"relative:{me.id}"
     check_admin(request, ak)
+    return "admin"
 
 
 @app.get("/api/metrics")
@@ -189,6 +209,129 @@ def client_info(client_id: int, db: Session = Depends(get_db)):
     return service.client_state(db, get_client(db, client_id))
 
 
+MAX_DEMO_CLIENTS = 40
+
+
+@app.post("/api/clients")
+async def create_client(body: ClientIn, db: Session = Depends(get_db)):
+    """A fresh demo account to show onboarding: no trusted contacts yet, shield on."""
+    if db.query(Client).count() >= MAX_DEMO_CLIENTS + 10:
+        raise HTTPException(429, "Слишком много демо-аккаунтов. Нажмите «Сбросить демо».")
+    from app.graph.generator import mask
+
+    used = {a.card_mask for a in db.query(Account.card_mask)}
+    last4 = next(f"{n:04d}" for n in random.sample(range(1000, 9999), 200) if mask(f"{n:04d}") not in used)
+    digits = contacts.digits(body.phone)
+    phone = "+7" + (digits if len(digits) == 10 else f"70{random.randint(0, 9)}{random.randint(1000000, 9999999)}")
+    if db.query(Client).filter_by(phone=phone).first():
+        raise HTTPException(400, "Клиент с таким номером уже есть")
+    c = Client(name=body.name.strip(), age=body.age, phone=phone, balance=body.balance, language="ru",
+               shield_enabled=True)
+    db.add(c)
+    db.flush()
+    db.add(Account(client_id=c.id, owner_name=c.name, bank="BCC", card_mask=mask(last4), card_key=f"bcc:{last4}"))
+    db.commit()
+    await service.push_client(db, c)
+    return service.client_state(db, c)
+
+
+@app.get("/api/clients/{client_id}/contacts")
+def client_contacts(client_id: int, db: Session = Depends(get_db)):
+    return [contacts.serialize(tc, with_code=True) for tc in contacts.contacts_of(db, get_client(db, client_id).id)]
+
+
+@app.post("/api/clients/{client_id}/contacts")
+async def add_contact(client_id: int, body: ContactIn, db: Session = Depends(get_db)):
+    c = get_client(db, client_id)
+    try:
+        tc = contacts.add_contact(db, c, body.name, body.relation, body.phone, body.model_dump())
+    except ValueError as e:
+        bad_request(e)
+    if tc.status == "approval":
+        await telegram_bot.notify_contact_request(db, c, tc)
+    await hub.broadcast("contacts_changed", {"client_id": c.id})
+    await service.push_client(db, c)
+    return contacts.serialize(tc, with_code=True)
+
+
+def get_contact(db: Session, contact_id: int) -> TrustedContact:
+    tc = db.get(TrustedContact, contact_id)
+    if not tc:
+        raise HTTPException(404, "Доверенное лицо не найдено")
+    return tc
+
+
+@app.delete("/api/clients/{client_id}/contacts/{contact_id}")
+async def delete_contact(client_id: int, contact_id: int, request: Request, db: Session = Depends(get_db),
+                         ident: list = Depends(relative_ident), x_admin_key: str | None = Header(default=None)):
+    """Cancelling an open invitation is free; removing an active trusted contact needs a trusted contact."""
+    c, tc = get_client(db, client_id), get_contact(db, contact_id)
+    if tc.client_id != c.id or tc.status not in contacts.LIVE:
+        raise HTTPException(404, "Доверенное лицо не найдено")
+    if tc.status == "active":
+        relative_or_admin(request, ident, c.id, x_admin_key)
+    contacts.remove(db, tc)
+    await hub.broadcast("contacts_changed", {"client_id": c.id})
+    await service.push_client(db, c)
+    return {"status": tc.status}
+
+
+@app.patch("/api/contacts/{contact_id}/rules")
+async def contact_rules(contact_id: int, body: RulesIn, db: Session = Depends(get_db), ident: list = Depends(relative_ident)):
+    tc = get_contact(db, contact_id)
+    by_relative = any(x.client_id == tc.client_id for x in ident)
+    try:
+        contacts.update_rules(db, tc, body.model_dump(exclude_none=True), by_relative)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    client = db.get(Client, tc.client_id)
+    await service.push_client(db, client)
+    return contacts.serialize(tc)
+
+
+@app.post("/api/contacts/{contact_id}/decision")
+async def contact_decision(contact_id: int, body: DecisionIn, db: Session = Depends(get_db),
+                           ident: list = Depends(relative_ident)):
+    """An active trusted contact allows (or not) adding one more."""
+    tc = get_contact(db, contact_id)
+    me = acting_for(ident, tc.client_id)
+    if me.id == tc.id:
+        raise HTTPException(403, "Нельзя одобрить самого себя")
+    try:
+        contacts.decide_addition(db, tc, body.decision)
+    except ValueError as e:
+        bad_request(e)
+    await hub.broadcast("contacts_changed", {"client_id": tc.client_id})
+    await service.push_client(db, db.get(Client, tc.client_id))
+    return contacts.serialize(tc)
+
+
+@app.get("/api/invites/{code}")
+def invite_info(code: str, db: Session = Depends(get_db)):
+    tc = db.query(TrustedContact).filter_by(link_code=code.strip().upper()).first()
+    if not tc or tc.status not in ("invited", "approval", "active"):
+        raise HTTPException(404, "Приглашение не найдено или уже недействительно")
+    client = db.get(Client, tc.client_id)
+    return {"client": client.name, "contact": contacts.serialize(tc), "bot": telegram_bot.bot_username,
+            "accepted": tc.status == "active"}
+
+
+@app.post("/api/invites/{code}/accept", dependencies=[Depends(check_admin)])
+async def invite_accept_web(code: str, db: Session = Depends(get_db)):
+    """Demo without Telegram: the presenter accepts the invitation in the browser (localhost or admin key).
+    Real people accept in Telegram, where their phone number is verified."""
+    tc = db.query(TrustedContact).filter_by(link_code=code.strip().upper()).first()
+    if not tc:
+        raise HTTPException(404, "Приглашение не найдено")
+    try:
+        contacts.accept(db, tc, None)
+    except ValueError as e:
+        bad_request(e)
+    await hub.broadcast("contacts_changed", {"client_id": tc.client_id})
+    await service.push_client(db, db.get(Client, tc.client_id))
+    return {"relative": f"/relative?rk={relative_key(tc.id)}", "contact": contacts.serialize(tc)}
+
+
 @app.post("/api/clients/{client_id}/language")
 async def set_language(client_id: int, body: LanguageIn, db: Session = Depends(get_db)):
     c = get_client(db, client_id)
@@ -207,19 +350,25 @@ async def set_shield(client_id: int, body: ShieldIn, db: Session = Depends(get_d
         db.commit()
         await service.push_client(db, c)
         return {"status": "enabled"}
-    tc = db.query(TrustedContact).filter_by(client_id=c.id).first()
+    people = contacts.active_contacts(db, c.id)
+    if not people:  # nobody to ask yet: the shield protects only through cooling, switching it off is allowed
+        c.shield_enabled, c.protection_mode = False, "off"
+        db.commit()
+        await service.push_client(db, c)
+        return {"status": "disabled"}
     await hub.broadcast("shield_off_request", {"client_id": c.id, "client": c.name, "at": datetime.now()})
-    return {"status": "pending", "message": f"Отключение щита требует подтверждения: {tc.name} ({tc.relation}) "
-                                             "или ожидания 24 часа. Так мошенник не сможет уговорить вас выключить защиту."}
+    await telegram_bot.notify_decision(db, c, f"🔓 {c.name} хочет отключить семейный щит. Разрешить можно в кабинете "
+                                              "доверенного лица. Если вас об этом не предупреждали — позвоните ей.")
+    names = ", ".join(f"{p.name} ({p.relation})" for p in people)
+    return {"status": "pending", "message": f"Отключение щита требует подтверждения: {names}. "
+                                             "Так мошенник не сможет уговорить вас выключить защиту."}
 
 
 @app.post("/api/clients/{client_id}/shield/confirm-off")
-async def confirm_shield_off(client_id: int, db: Session = Depends(get_db),
-                             x_relative_key: str | None = Header(default=None)):
-    """Only the trusted contact can switch the shield off (a scammer on the client's phone cannot)."""
+async def confirm_shield_off(client_id: int, db: Session = Depends(get_db), ident: list = Depends(relative_ident)):
+    """Only a trusted contact can switch the shield off (a scammer on the client's phone cannot)."""
     c = get_client(db, client_id)
-    tc = trusted_of(db, c.id)
-    require_relative(tc.id if tc else None, x_relative_key)
+    acting_for(ident, c.id)
     c.shield_enabled, c.protection_mode = False, "off"
     db.commit()
     await service.push_client(db, c)
@@ -228,10 +377,9 @@ async def confirm_shield_off(client_id: int, db: Session = Depends(get_db),
 
 @app.post("/api/clients/{client_id}/protection/off")
 async def protection_off(client_id: int, request: Request, db: Session = Depends(get_db),
-                         x_relative_key: str | None = Header(default=None),
-                         x_admin_key: str | None = Header(default=None)):
+                         ident: list = Depends(relative_ident), x_admin_key: str | None = Header(default=None)):
     c = get_client(db, client_id)
-    relative_or_admin(request, db, c.id, x_relative_key, x_admin_key)
+    relative_or_admin(request, ident, c.id, x_admin_key)
     c.protection_mode = "off"
     db.commit()
     await service.push_client(db, c)
@@ -250,7 +398,17 @@ def client_transfers(client_id: int, db: Session = Depends(get_db)):
 @app.post("/api/clients/{client_id}/loans")
 async def take_loan(client_id: int, body: LoanIn, db: Session = Depends(get_db)):
     loan = await service.take_loan(db, get_client(db, client_id), body.amount)
-    return {"id": loan.id, "amount": loan.amount, "created_at": loan.created_at}
+    return service.serialize_loan(loan)
+
+
+@app.post("/api/loans/{loan_id}/decision")
+async def loan_decision(loan_id: int, body: DecisionIn, db: Session = Depends(get_db), ident: list = Depends(relative_ident)):
+    loan = db.get(Loan, loan_id) or bad_request(ValueError("Заявка не найдена"))
+    me = acting_for(ident, loan.client_id)
+    try:
+        return service.serialize_loan(await service.decide_loan(db, loan, body.decision, by=f"relative:{me.id}"))
+    except ValueError as e:
+        bad_request(e)
 
 
 @app.post("/api/clients/{client_id}/transfers")
@@ -288,14 +446,12 @@ def transfer_detail(transfer_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/transfers/{transfer_id}/decision")
 async def transfer_decision(transfer_id: int, body: DecisionIn, db: Session = Depends(get_db),
-                            x_relative_key: str | None = Header(default=None)):
-    """Approve / reject a paused transfer. Only the sender's trusted contact may do this."""
+                            ident: list = Depends(relative_ident)):
+    """Approve / reject a paused transfer. Only a trusted contact of the sender may do this."""
     t = db.get(Transfer, transfer_id) or bad_request(ValueError("Перевод не найден"))
-    src = db.get(Account, t.from_account_id)
-    tc = trusted_of(db, src.client_id) if src and src.client_id else None
-    require_relative(tc.id if tc else None, x_relative_key)
+    me = acting_for(ident, transfer_client(db, t))
     try:
-        return await service.decide(db, t, body.decision, by="relative_web")
+        return await service.decide(db, t, body.decision, by=f"relative:{me.id}")
     except ValueError as e:
         bad_request(e)
 
@@ -317,17 +473,36 @@ async def fast_forward(db: Session = Depends(get_db)):
     return {"released": await service.fast_forward(db)}
 
 
-@app.get("/api/relative/{client_id}/inbox")
-def relative_inbox(client_id: int, db: Session = Depends(get_db), x_relative_key: str | None = Header(default=None)):
-    c = get_client(db, client_id)
-    tc = trusted_of(db, c.id)
-    require_relative(tc.id if tc else None, x_relative_key)
+def ward(db: Session, me: TrustedContact) -> dict:
+    """Everything a trusted contact sees about the person they protect: every transfer, open requests, rules."""
+    c = db.get(Client, me.client_id)
+    state = service.client_state(db, c)
+    people = contacts.contacts_of(db, c.id)
+    state["contacts"] = [contacts.serialize(p) for p in people]  # no invitation codes for relatives
+    state["trusted_contact"] = contacts.serialize(me)
+    state.pop("pending_loans", None)
     acc = service.account_of(db, c)
-    rows = db.query(Transfer).filter(Transfer.from_account_id == acc.id, Transfer.synthetic.is_(False),
-                                     Transfer.risk_level == "high").order_by(Transfer.id.desc()).limit(20).all()
-    return {"client": service.client_state(db, c),
-            "transfers": [service.serialize_transfer(db, t) for t in rows],
-            "alerts": [a for a in relative_alerts if a["client_id"] == client_id][-10:]}
+    rows = (db.query(Transfer).filter((Transfer.from_account_id == acc.id) | (Transfer.to_account_id == acc.id))
+            .order_by(Transfer.created_at.desc()).limit(40).all())
+    feed = [{**service.serialize_transfer(db, t), "direction": "out" if t.from_account_id == acc.id else "in"} for t in rows]
+    return {
+        "me": contacts.serialize(me),
+        "client": state,
+        "transfers": feed,
+        "pending": {
+            "transfers": [t for t in feed if t["status"] in service.PAUSED],
+            "loans": [service.serialize_loan(l) for l in db.query(Loan).filter_by(client_id=c.id, status="pending_relative")],
+            "contacts": [contacts.serialize(p) for p in people if p.status == "approval" and p.id != me.id],
+        },
+        "alerts": [a for a in relative_alerts if a["client_id"] == c.id][-10:],
+    }
+
+
+@app.get("/api/relative/me")
+def relative_me(db: Session = Depends(get_db), ident: list = Depends(relative_ident)):
+    if not ident:
+        raise HTTPException(403, "Откройте кабинет по личной ссылке доверенного лица или из Telegram-бота")
+    return {"wards": [ward(db, me) for me in ident], "telegram_bot": telegram_bot.bot_username}
 
 
 # --- calls -------------------------------------------------------------------------------------------
@@ -369,14 +544,14 @@ async def handle_text(db: Session, call: CallSession, text: str, source: str) ->
     await hub.broadcast("call_update", event)
     client = db.get(Client, call.client_id)
     if "high" in event["triggered"]:
-        tc = db.query(TrustedContact).filter_by(client_id=client.id).first()
+        tc = next(iter(contacts.active_contacts(db, client.id)), None)
         alert = {"id": len(relative_alerts) + 1, "client_id": client.id, "client": client.name,
                  "phone": client.phone, "scheme": event["scheme_label"], "risk": event["risk"],
                  "call_id": call.id, "at": datetime.now(),
                  "relation": tc.relation if tc else None}
         relative_alerts.append(alert)
         await hub.broadcast("relative_alert", alert)
-        await telegram_bot.send_call_alert(tc, client, event["scheme_label"]["ru"])
+        await telegram_bot.notify_call_alert(db, client, event["scheme_label"]["ru"])
     if event["triggered"]:
         await service.push_client(db, client)
         await hub.broadcast("metrics", service.metrics(db))

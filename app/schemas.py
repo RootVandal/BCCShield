@@ -58,3 +58,27 @@ class SignalIn(BaseModel):
 
 class SimulateSignalIn(BaseModel):
     account_id: int | None = None
+
+
+class ClientIn(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    age: int = Field(default=67, ge=18, le=110)
+    phone: str = Field(default="", max_length=24)
+    balance: float = Field(default=850_000, ge=0, le=50_000_000)
+
+
+class RulesIn(BaseModel):
+    threshold: float | None = Field(default=None, ge=0, le=100_000_000)
+    confirm_new: bool | None = None
+    confirm_loans: bool | None = None
+    notify_all: bool | None = None
+
+
+class ContactIn(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    relation: str = Field(default="сын", max_length=30)
+    phone: str = Field(min_length=10, max_length=24)
+    threshold: float = Field(default=100_000, ge=0, le=100_000_000)
+    confirm_new: bool = True
+    confirm_loans: bool = True
+    notify_all: bool = True

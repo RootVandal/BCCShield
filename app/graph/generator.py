@@ -98,8 +98,12 @@ def generate(db: Session, seed: int = 42, now: datetime | None = None) -> dict:
         clients.append(c)
         client_acc.append(g.account(name, last4=l4, client_id=c.id))
     saule, aidar = clients[0], clients[1]
-    db.add(TrustedContact(client_id=saule.id, name="Айдар", relation="сын", phone=aidar.phone,
-                          link_code=new_link_code("SAULE"), amount_threshold=100_000))
+    # The demo's trusted contact is already active (accepted earlier); Telegram is linked with /start CODE and no
+    # phone check, since the presenter's real number differs from the demo one. Loans stay instant for the main
+    # scenario ("take a loan, then transfer"); contacts added in the app confirm loans by default.
+    db.add(TrustedContact(client_id=saule.id, name="Айдар", relation="сын", phone=aidar.phone, status="active",
+                          link_code=new_link_code("SAULE"), amount_threshold=100_000, confirm_new=True,
+                          confirm_loans=False, notify_all=True, verify_phone=False))
 
     persons = [g.account(g.person_name()) for _ in range(300)]
     externals = [g.account(g.person_name(), bank=rng.choice(EXT_BANKS), external=True) for _ in range(60)]

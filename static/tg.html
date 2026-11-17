@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>BCC Shield · Семья</title>
+  <!-- Telegram Mini App SDK: provides the signed initData; the page only works inside Telegram -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/css/fonts.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/tailwind.css">
+  <style>
+    html, body { background: #0d0d0c; min-height: 100%; }
+    body { overflow-x: hidden; overscroll-behavior-y: none; }
+    main { max-width: 480px; margin: 0 auto; padding: 14px 16px calc(24px + env(safe-area-inset-bottom)); }
+  </style>
+</head>
+<body>
+  <main><div id="app"></div></main>
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/family.js"></script>
+  <script>
+    if (TG) {
+      TG.ready(); TG.expand();
+      try { TG.setHeaderColor("#0d0d0c"); TG.setBackgroundColor("#0d0d0c"); } catch (_) {}
+      startFamily();
+    } else {
+      document.getElementById("app").innerHTML = `<div class="card p-5 mt-8 text-center"><div class="text-[16px] font-semibold">Откройте в Telegram</div>
+        <p class="text-[13px] muted mt-2 leading-relaxed">Это мини-приложение бота BCC Shield. В браузере кабинет доверенного лица открывается по личной ссылке /relative?rk=…</p></div>`;
+    }
+  </script>
+</body>
+</html>

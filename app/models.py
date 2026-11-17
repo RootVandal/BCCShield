@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -23,15 +23,26 @@ class Client(Base):
 
 
 class TrustedContact(Base):
+    """A person who confirms the client's risky operations. A client can have several.
+
+    status: approval (an existing trusted contact must allow adding them) -> invited (waits for the person to
+    accept in Telegram) -> active. declined / removed are kept for the history.
+    """
     __tablename__ = "trusted_contacts"
     id: Mapped[int] = mapped_column(primary_key=True)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     name: Mapped[str] = mapped_column(String(120))
     relation: Mapped[str] = mapped_column(String(40))
     phone: Mapped[str] = mapped_column(String(32), default="")
-    telegram_chat_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    link_code: Mapped[str] = mapped_column(String(16), default="")
-    amount_threshold: Mapped[float] = mapped_column(Float, default=100_000)
+    telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    link_code: Mapped[str] = mapped_column(String(24), default="")
+    amount_threshold: Mapped[float] = mapped_column(Float, default=100_000)   # confirm transfers from this amount
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    confirm_new: Mapped[bool] = mapped_column(Boolean, default=True)          # confirm transfers to new people
+    confirm_loans: Mapped[bool] = mapped_column(Boolean, default=True)        # confirm loans
+    notify_all: Mapped[bool] = mapped_column(Boolean, default=True)           # see every transfer
+    verify_phone: Mapped[bool] = mapped_column(Boolean, default=True)         # Telegram number must match `phone`
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=now, nullable=True)
 
 
 class Account(Base):
@@ -74,6 +85,8 @@ class Loan(Base):
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
     amount: Mapped[float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now)
+    status: Mapped[str] = mapped_column(String(16), default="approved")      # pending_relative / approved / rejected
+    decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class CallSession(Base):
