@@ -326,6 +326,11 @@ python -m app.eval
 На сервере задайте в `.env` свой `ADMIN_KEY` (или возьмите сгенерированный из лога: `docker compose logs | grep Ключ`)
 и `PUBLIC_URL`. Ведущему достаточно один раз открыть `https://домен/?key=ADMIN_KEY` в своём браузере.
 
+## Презентация
+
+Питч открывается как обычная страница: `/pitch` (например, https://bcc-shield.onrender.com/pitch). Листать стрелками,
+пробелом, кликом или свайпом; кнопка ⛶ — полный экран, PDF — `static/pitch/BCC_Shield_pitch.pdf`.
+
 ## Хостинг на Render (https за пару минут)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RootVandal/BCCShield)

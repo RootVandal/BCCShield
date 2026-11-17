@@ -110,6 +110,13 @@ for route, file in {"/": "index.html", "/client": "client.html", "/relative": "r
     app.get(route, include_in_schema=False)(page(file))
 
 
+@app.get("/pitch", include_in_schema=False)
+def pitch():
+    """The pitch deck as a plain web page (arrows / swipe), with a PDF beside it."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/static/pitch/index.html")
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return FileResponse(STATIC / "favicon.svg", media_type="image/svg+xml")

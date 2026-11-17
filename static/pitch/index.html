@@ -1,0 +1,359 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BCC Shield — презентация</title><link rel="icon" href="/favicon.ico">
+<style>
+@font-face{font-family:'Onest';src:url(Onest.ttf) format('truetype');font-weight:100 900}
+@font-face{font-family:'JetBrains Mono';src:url(JetBrainsMono.ttf) format('truetype');font-weight:100 800}
+html,body{margin:0;height:100%;background:#050505;overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:0 0}
+#stage>section{position:absolute;inset:0;isolation:isolate;width:1920px;height:1080px;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .45s ease}
+#stage>section.active{opacity:1;visibility:visible}
+h1,h2,h3,p{margin:0} table{border-collapse:collapse} th,td{padding:.35em .6em;text-align:left;border-bottom:1px solid rgba(255,255,255,.12)}
+aside{display:none} .bgtex,.emb{z-index:-1}
+:root {
+  --bg: #0d0d0c;
+  --bg2: #141412;
+  --surface: #1b1b19;
+  --line: rgba(255, 255, 255, .12);
+  --text: #ecebe6;
+  --muted: #b4b2aa;
+  --faint: #8d8b83;
+  --accent: #2fd27a;
+  --accent-ink: #0a1a11;
+  --danger: #ff5c4d;
+  --warn: #f2b33d;
+  --violet: #c9a7ff;
+}
+
+body { font-family: 'Onest', Arial, sans-serif; color: var(--text); }
+
+section {
+  padding: 128px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  counter-increment: page;
+}
+section.alt { background: var(--bg2); }
+section.foot { padding: 128px 128px 160px; }
+
+/* type scale: 160 / 72 / 40 / 30 / 24 */
+h1 { font-size: 160px; font-weight: 700; line-height: 1; letter-spacing: -6px; color: var(--text); }
+h2 { font-size: 72px; font-weight: 600; line-height: 1.08; letter-spacing: -2px; color: var(--text); }
+h3 { font-size: 40px; font-weight: 600; line-height: 1.15; letter-spacing: -.5px; color: var(--text); }
+p { font-size: 30px; line-height: 1.4; color: var(--muted); }
+
+.eyebrow {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 24px; line-height: 1.2; letter-spacing: 4px; text-transform: uppercase; color: var(--accent);
+}
+.head { display: flex; flex-direction: column; gap: 24px; }
+.mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+.small { font-size: 24px; line-height: 1.35; }
+.white { color: var(--text); }
+.green { color: var(--accent); }
+.red { color: var(--danger); }
+.amber { color: var(--warn); }
+
+.source {
+  position: absolute; left: 128px; bottom: 64px; width: 1664px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 24px; line-height: 1.2; color: var(--faint);
+}
+
+.card {
+  background: rgba(24, 24, 22, .72); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, .1); border-radius: 28px; padding: 44px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+  display: flex; flex-direction: column; gap: 18px; box-sizing: border-box;
+}
+.card .num { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 24px; color: var(--accent); letter-spacing: 2px; }
+.card .lbl { font-size: 30px; line-height: 1.4; color: var(--muted); }
+.card .lbl24 { font-size: 24px; line-height: 1.4; color: var(--muted); }
+
+.big { font-size: 160px; font-weight: 700; line-height: 1; letter-spacing: -6px; color: var(--text); }
+.big.green { color: var(--accent); }
+.big.red { color: var(--danger); }
+.unit { font-size: 72px; font-weight: 600; letter-spacing: -2px; line-height: 1; color: var(--muted); }
+
+.pill {
+  font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 24px; line-height: 1;
+  padding: 12px 20px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+  align-self: flex-start;
+}
+.pill.red { color: var(--danger); border: 1px solid rgba(255, 92, 77, .45); background: rgba(255, 92, 77, .1); }
+.pill.green { color: var(--accent); border: 1px solid rgba(47, 210, 122, .45); background: rgba(47, 210, 122, .1); }
+.pill.amber { color: var(--warn); border: 1px solid rgba(242, 179, 61, .45); background: rgba(242, 179, 61, .1); }
+
+/* phone mockups */
+.phone {
+  width: 350px; background: #0d0d0c; border: 10px solid #262623; border-radius: 56px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .55);
+  padding: 34px 26px 30px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px;
+}
+.phone.danger { background: linear-gradient(180deg, #8d1a10 0%, #4a0b06 100%); }
+.phone .t-xl { font-size: 40px; font-weight: 700; line-height: 1.08; letter-spacing: -1px; color: #fff4f1; }
+.phone .t { font-size: 24px; line-height: 1.3; color: rgba(255, 244, 241, .85); }
+.phone .btn { font-size: 24px; font-weight: 600; text-align: center; padding: 18px 10px; border-radius: 18px; }
+.btn.white { background: #f6f1ee; color: #7a1109; }
+.btn.ghost { background: rgba(255, 255, 255, .1); color: #f6f1ee; border: 1px solid rgba(255, 255, 255, .2); }
+.btn.ok { background: rgba(47, 210, 122, .14); color: var(--accent); }
+.btn.no { background: rgba(255, 92, 77, .16); color: var(--danger); }
+.bubble { background: #1f2a23; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+.bubble .t { color: #e9efe9; }
+
+/* tables */
+table { font-size: 30px; color: var(--text); width: 100%; }
+tr.hd { background: var(--surface); }
+
+/* step row */
+.steps { display: flex; gap: 20px; }
+.step { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); }
+.bar.on { background: var(--accent); }
+.bar.hot { background: var(--danger); }
+
+/* motion: rise on arrival, staged with --i */
+@keyframes rise { from { opacity: 0; transform: translateY(28px); } }
+@keyframes fadein { from { opacity: 0; } }
+.r { animation: rise .6s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 100ms); }
+.f { animation: fadein .9s ease-out both; animation-delay: calc(var(--i, 0) * 100ms); }
+
+@property --n { syntax: '<integer>'; inherits: false; initial-value: 0 }
+@keyframes count { from { --n: 0 } }
+.n { animation: count 1.2s ease-out both }
+
+/* green statement slide */
+section.accent { background: var(--accent); color: var(--accent-ink); justify-content: center; }
+section.accent h2 { color: var(--accent-ink); font-size: 96px; line-height: 1.06; letter-spacing: -3px; }
+section.accent .eyebrow { color: var(--accent-ink); }
+
+/* cover */
+section.cover { justify-content: space-between; }
+.logo { width: 120px; height: 120px; border-radius: 30px; background: linear-gradient(180deg, #f3f1eb, #bbb8af); display: flex; align-items: center; justify-content: center; }
+
+/* flow diagram */
+.node { flex: 1; background: rgba(24, 24, 22, .72); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 12px; }
+.node.hl { border: 1px solid rgba(47, 210, 122, .55); background: #14251b; }
+.arrow { width: 56px; height: 28px; align-self: center; flex: none; background: #4a4a45; }
+
+/* sand texture backdrop, the same flow field as the site */
+.bgtex { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+section.black { background: #0a0a09; }
+.lyr { display: flex; gap: 28px; align-items: baseline; padding: 22px 0; border-top: 1px solid rgba(255, 255, 255, .12); }
+.lyr .k { font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 24px; color: var(--accent); width: 44px; flex: none; }
+.lyr .tt { font-size: 30px; font-weight: 600; color: var(--text); line-height: 1.25; width: 330px; flex: none; }
+.lyr .dd { font-size: 24px; line-height: 1.35; color: var(--muted); flex: 1; }
+.qr { background: #ecebe6; border-radius: 36px; padding: 36px; display: flex; flex-direction: column; align-items: center; gap: 20px; box-shadow: 0 0 120px rgba(47, 210, 122, .25); }
+.qr p { font-size: 24px; color: #0d0d0c; font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+section:not(.active) .r, section:not(.active) .f, section:not(.active) .n{animation:none}
+.ui{position:fixed;bottom:16px;right:16px;display:flex;gap:8px;z-index:9;font:14px 'JetBrains Mono',monospace;color:#b4b2aa}
+.ui a,.ui button{background:rgba(30,30,28,.85);border:1px solid rgba(255,255,255,.14);color:#ecebe6;border-radius:10px;padding:8px 12px;cursor:pointer;text-decoration:none;font:inherit}
+.ui span{padding:8px 4px}
+@media print{.ui{display:none}}
+</style></head><body>
+<div id="stage">
+<section id="cover" class="cover" data-transition="fade">
+<iframe class="emb" style="border:0;position:absolute;left:0;top:0;width:1920px;height:1080px" srcdoc="&lt;style&gt;html,body{margin:0;height:100%;background:#0d0d0c;overflow:hidden}canvas{display:block;width:100%;height:100%}&lt;/style&gt;&lt;canvas id=&quot;c&quot;&gt;&lt;/canvas&gt;&lt;script&gt;
+var c=document.getElementById(&#x27;c&#x27;),x=c.getContext(&#x27;2d&#x27;),W,H,P=[],t=0;
+function rs(){W=c.width=innerWidth;H=c.height=innerHeight;x.fillStyle=&#x27;#0d0d0c&#x27;;x.fillRect(0,0,W,H);P=[];var n=Math.round(W*H/300);for(var i=0;i&lt;n;i++)P.push([Math.random()*W,Math.random()*H,Math.random()*400|0]);}
+function f(px,py){var s=1.6/W;return Math.sin(px*s+Math.sin(py*s*1.3+t*.2)*2.2)+Math.cos(py*s*1.1-t*.15)*.8;}
+function step(){t+=.004;x.fillStyle=&#x27;rgba(13,13,12,0.07)&#x27;;x.fillRect(0,0,W,H);x.fillStyle=&#x27;rgba(225,222,210,0.42)&#x27;;
+for(var i=0;i&lt;P.length;i++){var p=P[i],a=f(p[0],p[1])*Math.PI;p[0]+=Math.cos(a)*.6*W/1920;p[1]+=Math.sin(a)*.6*W/1920;
+if(--p[2]&lt;0||p[0]&lt;0||p[0]&gt;W||p[1]&lt;0||p[1]&gt;H){p[0]=Math.random()*W;p[1]=Math.random()*H;p[2]=200+Math.random()*300|0;}
+x.fillRect(p[0],p[1],1.2,1.2);}requestAnimationFrame(step);}
+rs();addEventListener(&#x27;resize&#x27;,rs);step();
+&lt;/script&gt;" loading="eager"></iframe>
+<div style="display:flex;align-items:center;gap:28px" class="r"><div class="logo"><svg aria-label="Логотип BCC Shield" width="72" height="72" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div><p class="eyebrow" style="color:var(--text)">V ITU Hackathon 2026 · Банк ЦентрКредит</p></div>
+<div style="display:flex;flex-direction:column;gap:36px">
+<h1 class="r" style="--i:1;font-size:200px;letter-spacing:-8px">BCC Shield</h1>
+<p class="r" style="--i:2;font-size:44px;line-height:1.25;color:var(--text);width:1200px">Семейная защита пенсионеров от телефонных мошенников</p>
+</div>
+<p class="r mono small" style="--i:3;color:var(--muted)">Кейс «Инновации в банкинге и кибербезопасность»</p>
+</section><section id="problem" class="foot">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div class="head"><p class="eyebrow r">Проблема</p><h2 class="r" style="--i:1;width:1400px">Казахстанцы сами отдают деньги мошенникам</h2></div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:96px;align-items:flex-end">
+<div class="r" style="--i:2;display:flex;flex-direction:column;gap:20px;width:640px">
+<div style="display:flex;align-items:flex-end;gap:20px"><p class="big n red" style="font-size:200px;letter-spacing:-8px">45</p><p class="unit" style="padding-bottom:14px">млрд ₸</p></div>
+<p>потеряли жители Казахстана из-за интернет-мошенников в 2024 году</p></div>
+<div class="r" style="--i:3;display:flex;flex-direction:column;gap:20px;width:560px">
+<div style="display:flex;align-items:flex-end;gap:12px"><p class="big n" style="font-size:200px;letter-spacing:-8px">98</p><p class="unit" style="padding-bottom:14px">%</p></div>
+<p>случаев: жертва сама передала данные или деньги</p></div>
+</div>
+<div style="flex:1"></div>
+<div class="r" style="--i:4;border-top:1px solid var(--line);padding-top:36px"><p style="width:1500px">Банк видит обычную операцию: клиент сам вошёл в приложение, сам взял кредит и сам подтвердил перевод. Антифрод не за что зацепить.</p></div>
+<p class="source">Источник: МВД РК на форуме Digital Almaty 2025 (finratings.kz)</p>
+</section><section id="thesis" class="black">
+<iframe class="emb" style="border:0;position:absolute;left:1000px;top:0;width:920px;height:1080px" srcdoc="&lt;style&gt;html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+.st{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1600px}
+.glow{position:absolute;width:86vmin;height:86vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(47,210,122,.42),rgba(47,210,122,.10) 55%,rgba(47,210,122,0))}
+.fl{position:absolute;width:62vmin;height:6vmin;bottom:9vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(47,210,122,.35),rgba(47,210,122,0))}
+.sh{position:relative;width:58vmin;height:72vmin;transform-style:preserve-3d;animation:sway 10s ease-in-out infinite alternate}
+.sh svg{position:absolute;left:0;top:0;width:100%;height:100%;backface-visibility:visible}
+@keyframes sway{from{transform:rotateY(-32deg) rotateX(10deg)}to{transform:rotateY(32deg) rotateX(-6deg)}}
+&lt;/style&gt;
+&lt;div class=&quot;st&quot;&gt;&lt;div class=&quot;glow&quot;&gt;&lt;/div&gt;&lt;div class=&quot;fl&quot;&gt;&lt;/div&gt;&lt;div class=&quot;sh&quot; id=&quot;s&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;script&gt;
+var O=&#x27;M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z&#x27;,
+G=&#x27;M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z&#x27;,
+L=&#x27;M12 5.2v14.1c-3.1-1.3-5.1-4.4-5.1-7.9V7.1L12 5.2Z&#x27;,VB=&#x27;4.1 2.1 15.8 19.9&#x27;,N=34,D=0.55,h=&#x27;&#x27;;
+var s=document.getElementById(&#x27;s&#x27;);
+for(var i=0;i&lt;N;i++){var z=(i-(N-1)/2)*D,k=i/(N-1),e=Math.abs(k-.5)*2,
+c=&#x27;rgb(&#x27;+Math.round(70+60*e)+&#x27;,&#x27;+Math.round(78+64*e)+&#x27;,&#x27;+Math.round(72+56*e)+&#x27;)&#x27;;
+h+=&#x27;&lt;svg viewBox=&quot;&#x27;+VB+&#x27;&quot; style=&quot;transform:translateZ(&#x27;+z.toFixed(2)+&#x27;vmin)&quot;&gt;&lt;path d=&quot;&#x27;+O+&#x27;&quot; fill=&quot;&#x27;+c+&#x27;&quot;/&gt;&lt;/svg&gt;&#x27;;}
+var z=((N-1)/2*D+.05).toFixed(2);
+h+=&#x27;&lt;svg viewBox=&quot;&#x27;+VB+&#x27;&quot; style=&quot;transform:translateZ(&#x27;+z+&#x27;vmin)&quot;&gt;&lt;defs&gt;&#x27;+
+&#x27;&lt;linearGradient id=&quot;p&quot; x1=&quot;0&quot; y1=&quot;0&quot; x2=&quot;1&quot; y2=&quot;1&quot;&gt;&lt;stop offset=&quot;0&quot; stop-color=&quot;#fbfaf6&quot;/&gt;&lt;stop offset=&quot;.45&quot; stop-color=&quot;#d9d6cd&quot;/&gt;&lt;stop offset=&quot;.7&quot; stop-color=&quot;#a9a69c&quot;/&gt;&lt;stop offset=&quot;1&quot; stop-color=&quot;#ecebe5&quot;/&gt;&lt;/linearGradient&gt;&#x27;+
+&#x27;&lt;linearGradient id=&quot;g&quot; x1=&quot;0&quot; y1=&quot;0&quot; x2=&quot;.3&quot; y2=&quot;1&quot;&gt;&lt;stop offset=&quot;0&quot; stop-color=&quot;#8ff7c0&quot;/&gt;&lt;stop offset=&quot;.5&quot; stop-color=&quot;#2fd27a&quot;/&gt;&lt;stop offset=&quot;1&quot; stop-color=&quot;#127a43&quot;/&gt;&lt;/linearGradient&gt;&#x27;+
+&#x27;&lt;linearGradient id=&quot;d&quot; x1=&quot;0&quot; y1=&quot;0&quot; x2=&quot;0&quot; y2=&quot;1&quot;&gt;&lt;stop offset=&quot;0&quot; stop-color=&quot;#2a2a27&quot;/&gt;&lt;stop offset=&quot;1&quot; stop-color=&quot;#121211&quot;/&gt;&lt;/linearGradient&gt;&#x27;+
+&#x27;&lt;linearGradient id=&quot;w&quot; x1=&quot;0&quot; y1=&quot;0&quot; x2=&quot;1&quot; y2=&quot;0&quot;&gt;&lt;stop offset=&quot;0&quot; stop-color=&quot;#fff&quot; stop-opacity=&quot;.55&quot;/&gt;&lt;stop offset=&quot;1&quot; stop-color=&quot;#fff&quot; stop-opacity=&quot;0&quot;/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&#x27;+
+&#x27;&lt;path d=&quot;&#x27;+O+&#x27;&quot; fill=&quot;url(#p)&quot;/&gt;&lt;path d=&quot;&#x27;+O+&#x27;&quot; fill=&quot;none&quot; stroke=&quot;#fff&quot; stroke-opacity=&quot;.7&quot; stroke-width=&quot;.12&quot;/&gt;&#x27;+
+&#x27;&lt;path d=&quot;&#x27;+L+&#x27;&quot; fill=&quot;url(#d)&quot;/&gt;&lt;path d=&quot;&#x27;+G+&#x27;&quot; fill=&quot;url(#g)&quot;/&gt;&#x27;+
+&#x27;&lt;path d=&quot;M5.2 5.8 12 3.2v2l-5.4 2v3.2c0 .6.1 1.2.2 1.8L5.2 9Z&quot; fill=&quot;url(#w)&quot; opacity=&quot;.8&quot;/&gt;&lt;/svg&gt;&#x27;;
+h=&#x27;&lt;svg viewBox=&quot;&#x27;+VB+&#x27;&quot; style=&quot;transform:translateZ(-&#x27;+z+&#x27;vmin) rotateY(180deg)&quot;&gt;&lt;path d=&quot;&#x27;+O+&#x27;&quot; fill=&quot;#8d8a82&quot;/&gt;&lt;/svg&gt;&#x27;+h;
+s.innerHTML=h;
+&lt;/script&gt;
+" loading="eager"></iframe>
+<div style="width:900px;display:flex;flex-direction:column;gap:40px;flex:1">
+<p class="eyebrow r">Идея</p>
+<h2 class="r" style="--i:1;font-size:64px;letter-spacing:-2px">Мошенник уговаривает одного человека. BCC&#160;Shield подключает семью.</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column">
+<div class="lyr r" style="--i:2"><p class="k">01</p><p class="tt">Слышит звонок</p><p class="dd">Речь RU/KZ, LLM, сигнал оператора</p></div>
+<div class="lyr r" style="--i:3"><p class="k">02</p><p class="tt">Останавливает деньги</p><p class="dd">Перевод, кредит, наличные, депозит</p></div>
+<div class="lyr r" style="--i:4"><p class="k">03</p><p class="tt">Зовёт семью</p><p class="dd">Решение сына в Telegram</p></div>
+<div class="lyr r" style="--i:5"><p class="k">04</p><p class="tt">Находит дропов</p><p class="dd">Граф переводов и Антифрод-центр</p></div>
+</div>
+</div>
+</section><section id="flow" class="foot">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div class="head"><p class="eyebrow r">Как это работает</p><h2 class="r" style="--i:1">От звонка до решения семьи</h2></div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:12px;align-items:stretch">
+<div class="node r" style="--i:2;padding:28px;gap:14px"><p class="mono small green">01</p><h3 style="font-size:32px">Звонок</h3><p class="small">Микрофон на громкой связи или сигнал оператора связи</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r" style="--i:3;padding:28px;gap:14px"><p class="mono small green">02</p><h3 style="font-size:32px">Риск звонка</h3><p class="small">109 фраз RU/KZ и LLM. Жёлтый экран с 50%, красный с 80%</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r hl" style="--i:4;padding:28px;gap:14px"><p class="mono small green">03</p><h3 style="font-size:32px">Пауза</h3><p class="small">Перевод, кредит, наличные и депозит ждут решения</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r" style="--i:5;padding:28px;gap:14px"><p class="mono small green">04</p><h3 style="font-size:32px">Семья решает</h3><p class="small">Запрос в Telegram. Нет ответа — 5 минут охлаждения</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r" style="--i:6;padding:28px;gap:14px"><p class="mono small green">05</p><h3 style="font-size:32px">Граф дропов</h3><p class="small">Отклонённая карта → вся сеть → Антифрод-центр</p></div>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:24px">
+<div class="card r" style="--i:7;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">Обычная жизнь не страдает</p><p class="small">Звонок врача, перевод сыну 40 000 ₸ проходят сразу. Ложных тревог — 3,6% на 28 обычных разговорах.</p></div>
+<div class="card r" style="--i:8;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">iOS и Android не отдают звонок</p><p class="small">Нацбанк подключает операторов связи к Антифрод-центру. BCC Shield уже принимает такой сигнал.</p></div>
+</div>
+<p class="source">Сигнал оператора: проект поправок Нацбанка РК, февраль 2026 (finratings.kz)</p>
+</section><section id="family" class="alt">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div style="display:flex;gap:96px;flex:1">
+<div style="flex:1;display:flex;flex-direction:column">
+<div class="head"><p class="eyebrow r">Главная функция</p><h2 class="r" style="--i:1">Как подключить доверенное лицо</h2></div>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column">
+<div class="lyr r" style="--i:2;align-items:flex-start;padding:24px 0"><p class="k" style="padding-top:4px">01</p><div style="display:flex;flex-direction:column;gap:8px;flex:1"><p class="tt" style="width:auto">Сауле добавляет сына</p><p class="dd">Имя, кем приходится, телефон и правила: порог суммы, новые получатели, кредиты</p></div></div>
+<div class="lyr r" style="--i:3;align-items:flex-start;padding:24px 0"><p class="k" style="padding-top:4px">02</p><div style="display:flex;flex-direction:column;gap:8px;flex:1"><p class="tt" style="width:auto">Семья разрешает</p><p class="dd">Если доверенное лицо уже есть, нового одобряет оно — «сотрудника банка» не добавить</p></div></div>
+<div class="lyr r" style="--i:4;align-items:flex-start;padding:24px 0"><p class="k" style="padding-top:4px">03</p><div style="display:flex;flex-direction:column;gap:8px;flex:1"><p class="tt" style="width:auto">Сын принимает в Telegram</p><p class="dd">Ссылка-приглашение → бот → «Поделиться номером»: номер должен совпасть</p></div></div>
+<div class="lyr r" style="--i:5;align-items:flex-start;padding:24px 0"><p class="k" style="padding-top:4px">04</p><div style="display:flex;flex-direction:column;gap:8px;flex:1"><p class="tt" style="width:auto">Щит работает</p><p class="dd">Сын видит все переводы и решает по рискованным. До 5 доверенных лиц</p></div></div>
+</div>
+</div>
+<div class="r" style="--i:3;display:flex;align-items:center">
+<div class="phone" style="width:400px">
+<p class="t" style="color:var(--muted)">@BCCshieldbot</p>
+<div class="bubble">
+<p class="t" style="color:#fff;font-weight:600">Сауле Ахметова приглашает вас стать доверенным лицом (сын)</p>
+<p class="t">Вы будете подтверждать:<br>• переводы от 100 000 ₸<br>• новых получателей<br>• кредиты и займы</p>
+</div>
+<p class="btn ok">Принять</p>
+<p class="btn" style="background:#2a2a27;color:#ecebe6">Поделиться номером</p>
+<p class="t" style="font-size:24px;color:var(--faint);text-align:center">Номер сверяется с приглашением</p>
+</div>
+</div>
+</div>
+</section><section id="screens" class="alt">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div class="head"><p class="eyebrow r">Продукт</p><h2 class="r" style="--i:1">Что видят Сауле и её сын</h2></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:space-between;margin-top:40px">
+<div class="r" style="--i:2;display:flex;gap:48px;align-items:center">
+<div class="phone danger">
+<div style="width:64px;height:64px;border-radius:32px;background:#ff5c4d;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="color:#fff;width:36px;height:36px" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+<p class="t-xl">СТОП. Вам звонят мошенники</p>
+<p class="t">Риск 96% · схема «безопасный счёт»</p>
+<p class="t">Банк никогда не просит переводить деньги.</p>
+<p class="btn white">Положить трубку</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;width:300px"><p class="eyebrow" style="color:var(--danger)">Сауле, 67</p><p>Красный экран прямо во время звонка. Режим защиты включён.</p></div>
+</div>
+<div class="r" style="--i:4;display:flex;gap:48px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:16px;width:300px;text-align:right"><p class="eyebrow">Айдар, сын</p><p>Запрос в Telegram с причинами и двумя кнопками.</p></div>
+<div class="phone">
+<p class="t" style="color:var(--muted)">@BCCshieldbot</p>
+<div class="bubble">
+<p class="t" style="font-weight:600;color:#fff">Нужно ваше решение</p>
+<p class="t">Сауле переводит 2 млн ₸ на Kaspi •• 4417</p>
+<p class="t" style="color:#ffb1a8">• Звонок с риском 96%<br>• Получатель в дроп-сети</p>
+</div>
+<p class="btn ok">Подтвердить</p>
+<p class="btn no">Отклонить</p>
+</div>
+</div>
+</div>
+</section><section id="engine">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div class="head"><p class="eyebrow r">Движок риска</p><h2 class="r" style="--i:1">Каждый балл объяснён</h2></div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:64px;align-items:center">
+<div class="card r" style="--i:2;flex:1;padding:36px">
+<table style="font-size:28px">
+<tr class="hd"><th style="width:84%">Перевод 2 000 000 ₸ на Kaspi •• 4417</th><th style="text-align:right">Баллы</th></tr>
+<tr><td>Идёт звонок с риском мошенничества 96%</td><td style="text-align:right;color:var(--danger)">+53</td></tr>
+<tr><td>Получатель связан с дроп-сетью</td><td style="text-align:right;color:var(--danger)">+30</td></tr>
+<tr><td>Новый получатель, сумма в 89 раз больше обычной</td><td style="text-align:right">+30</td></tr>
+<tr><td>Клиент 60+, реквизиты из буфера, форма за 3 секунды</td><td style="text-align:right">+15</td></tr>
+</table></div>
+<div class="r" style="--i:3;width:420px;display:flex;flex-direction:column;gap:20px">
+<p class="big red n" style="font-size:200px;letter-spacing:-8px">100</p>
+<p class="pill red">высокий риск → пауза</p>
+<p class="small">До 40 — проходит. 40–70 — три вопроса. Выше 70 — решает семья.</p>
+</div>
+</div>
+<div style="flex:1"></div>
+<div class="r" style="--i:4;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+<p class="small white" style="margin-right:8px">Через этот же движок:</p>
+<p class="pill" style="color:var(--text)">Перевод</p><p class="pill" style="color:var(--text)">Кредит</p><p class="pill" style="color:var(--text)">Снятие наличных</p><p class="pill" style="color:var(--text)">Закрытие депозита</p>
+
+</div>
+</section><section id="thanks" style="flex-direction:row;align-items:stretch;gap:96px">
+<iframe class="emb" style="border:0;position:absolute;left:0;top:0;width:1920px;height:1080px" srcdoc="&lt;style&gt;html,body{margin:0;height:100%;background:#0d0d0c;overflow:hidden}canvas{display:block;width:100%;height:100%}&lt;/style&gt;&lt;canvas id=&quot;c&quot;&gt;&lt;/canvas&gt;&lt;script&gt;
+var c=document.getElementById(&#x27;c&#x27;),x=c.getContext(&#x27;2d&#x27;),W,H,P=[],t=0;
+function rs(){W=c.width=innerWidth;H=c.height=innerHeight;x.fillStyle=&#x27;#0d0d0c&#x27;;x.fillRect(0,0,W,H);P=[];var n=Math.round(W*H/300);for(var i=0;i&lt;n;i++)P.push([Math.random()*W,Math.random()*H,Math.random()*400|0]);}
+function f(px,py){var s=1.6/W;return Math.sin(px*s+Math.sin(py*s*1.3+t*.2)*2.2)+Math.cos(py*s*1.1-t*.15)*.8;}
+function step(){t+=.004;x.fillStyle=&#x27;rgba(13,13,12,0.07)&#x27;;x.fillRect(0,0,W,H);x.fillStyle=&#x27;rgba(225,222,210,0.42)&#x27;;
+for(var i=0;i&lt;P.length;i++){var p=P[i],a=f(p[0],p[1])*Math.PI;p[0]+=Math.cos(a)*.6*W/1920;p[1]+=Math.sin(a)*.6*W/1920;
+if(--p[2]&lt;0||p[0]&lt;0||p[0]&gt;W||p[1]&lt;0||p[1]&gt;H){p[0]=Math.random()*W;p[1]=Math.random()*H;p[2]=200+Math.random()*300|0;}
+x.fillRect(p[0],p[1],1.2,1.2);}requestAnimationFrame(step);}
+rs();addEventListener(&#x27;resize&#x27;,rs);step();
+&lt;/script&gt;" loading="eager"></iframe>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;align-items:center;gap:28px" class="r"><div class="logo"><svg aria-label="Логотип BCC Shield" width="72" height="72" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div><p class="eyebrow" style="color:var(--text)">BCC Shield</p></div>
+<div style="display:flex;flex-direction:column;gap:40px">
+<h1 class="r" style="--i:1;font-size:200px;letter-spacing:-8px">Спасибо</h1>
+<p class="r mono" style="--i:2;font-size:32px;line-height:1.55;color:var(--text)">bcc-shield.onrender.com<br>github.com/RootVandal/BCCShield<br>@BCCshieldbot</p>
+</div>
+<p class="r small" style="--i:3;color:var(--muted)">[Имена участников команды]</p>
+</div>
+<div class="r" style="--i:2;display:flex;align-items:center"><div class="qr"><svg aria-label="QR-код: bcc-shield.onrender.com" width="300" height="300" viewBox="0 0 29 29" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM8 0h1v1h-1zM9 0h1v1h-1zM10 0h1v1h-1zM11 0h1v1h-1zM12 0h1v1h-1zM15 0h1v1h-1zM16 0h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h1v1h-1zM10 1h1v1h-1zM11 1h1v1h-1zM14 1h1v1h-1zM15 1h1v1h-1zM17 1h1v1h-1zM18 1h1v1h-1zM20 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM9 2h1v1h-1zM11 2h1v1h-1zM12 2h1v1h-1zM13 2h1v1h-1zM14 2h1v1h-1zM15 2h1v1h-1zM18 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM25 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM9 3h1v1h-1zM16 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM9 4h1v1h-1zM12 4h1v1h-1zM13 4h1v1h-1zM19 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM12 5h1v1h-1zM14 5h1v1h-1zM17 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM17 7h1v1h-1zM19 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM11 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM22 8h1v1h-1zM25 8h1v1h-1zM27 8h1v1h-1zM28 8h1v1h-1zM0 9h1v1h-1zM1 9h1v1h-1zM2 9h1v1h-1zM3 9h1v1h-1zM4 9h1v1h-1zM7 9h1v1h-1zM8 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM22 9h1v1h-1zM23 9h1v1h-1zM24 9h1v1h-1zM28 9h1v1h-1zM3 10h1v1h-1zM4 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM11 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM15 10h1v1h-1zM17 10h1v1h-1zM18 10h1v1h-1zM26 10h1v1h-1zM27 10h1v1h-1zM0 11h1v1h-1zM1 11h1v1h-1zM2 11h1v1h-1zM5 11h1v1h-1zM7 11h1v1h-1zM9 11h1v1h-1zM11 11h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM15 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM23 11h1v1h-1zM24 11h1v1h-1zM28 11h1v1h-1zM0 12h1v1h-1zM2 12h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM8 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM16 12h1v1h-1zM17 12h1v1h-1zM19 12h1v1h-1zM25 12h1v1h-1zM26 12h1v1h-1zM0 13h1v1h-1zM2 13h1v1h-1zM3 13h1v1h-1zM5 13h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM10 13h1v1h-1zM12 13h1v1h-1zM13 13h1v1h-1zM17 13h1v1h-1zM19 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM26 13h1v1h-1zM27 13h1v1h-1zM28 13h1v1h-1zM0 14h1v1h-1zM1 14h1v1h-1zM2 14h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM0 15h1v1h-1zM1 15h1v1h-1zM2 15h1v1h-1zM3 15h1v1h-1zM5 15h1v1h-1zM8 15h1v1h-1zM10 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM19 15h1v1h-1zM20 15h1v1h-1zM21 15h1v1h-1zM24 15h1v1h-1zM27 15h1v1h-1zM0 16h1v1h-1zM2 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM7 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM12 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM21 16h1v1h-1zM23 16h1v1h-1zM24 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM3 17h1v1h-1zM4 17h1v1h-1zM5 17h1v1h-1zM9 17h1v1h-1zM10 17h1v1h-1zM12 17h1v1h-1zM13 17h1v1h-1zM18 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM0 18h1v1h-1zM3 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM21 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM26 18h1v1h-1zM3 19h1v1h-1zM5 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM10 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM21 19h1v1h-1zM23 19h1v1h-1zM26 19h1v1h-1zM1 20h1v1h-1zM2 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM7 20h1v1h-1zM8 20h1v1h-1zM11 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM10 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM17 21h1v1h-1zM18 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM0 22h1v1h-1zM1 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM8 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM16 22h1v1h-1zM18 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM10 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM27 23h1v1h-1zM0 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM12 24h1v1h-1zM14 24h1v1h-1zM17 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM26 24h1v1h-1zM28 24h1v1h-1zM0 25h1v1h-1zM2 25h1v1h-1zM3 25h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM10 25h1v1h-1zM11 25h1v1h-1zM13 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM20 25h1v1h-1zM21 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM27 25h1v1h-1zM0 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM17 26h1v1h-1zM20 26h1v1h-1zM23 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM10 27h1v1h-1zM11 27h1v1h-1zM14 27h1v1h-1zM16 27h1v1h-1zM20 27h1v1h-1zM25 27h1v1h-1zM27 27h1v1h-1zM0 28h1v1h-1zM1 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM18 28h1v1h-1zM19 28h1v1h-1zM20 28h1v1h-1zM21 28h1v1h-1zM23 28h1v1h-1zM27 28h1v1h-1z" fill="#0d0d0c"/></svg><p>Открыть демо</p></div></div>
+</section>
+</div>
+<div class="ui"><button onclick="go(-1)" aria-label="Назад">←</button><span id="pg"></span><button onclick="go(1)" aria-label="Вперёд">→</button>
+<button onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">⛶</button><a href="BCC_Shield_pitch.pdf" download>PDF</a></div>
+<script>
+var S=[].slice.call(document.querySelectorAll('#stage>section')),i=0,st=document.getElementById('stage');
+function fit(){var k=Math.min(innerWidth/1920,innerHeight/1080);st.style.transform='scale('+k+') translate(-50%,-50%)';}
+function show(n){i=Math.max(0,Math.min(S.length-1,n));S.forEach(function(s,j){s.classList.toggle('active',j===i)});document.getElementById('pg').textContent=(i+1)+' / '+S.length;history.replaceState(null,'','#'+(i+1));}
+function go(d){show(i+d)}
+addEventListener('keydown',function(e){if(['ArrowRight','PageDown',' ','Enter'].indexOf(e.key)>=0)go(1);else if(['ArrowLeft','PageUp','Backspace'].indexOf(e.key)>=0)go(-1);else if(e.key==='Home')show(0);else if(e.key==='End')show(S.length-1);});
+var x0=null;addEventListener('touchstart',function(e){x0=e.touches[0].clientX});addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>40)go(dx<0?1:-1);x0=null});
+st.addEventListener('click',function(e){if(!e.target.closest('a'))go(e.clientX>innerWidth/2?1:-1)});
+addEventListener('resize',fit);fit();show((parseInt(location.hash.slice(1))||1)-1);
+</script></body></html>
