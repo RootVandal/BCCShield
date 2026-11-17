@@ -31,7 +31,7 @@ function renderMetrics(flash) {
     ["Recall графа", (m.recall ?? 0).toFixed(2), "r"],
     // honest number from the evaluation set (app/eval.py) instead of a rate counted on three demo calls
     A.eval ? ["Ложные тревоги звонков", pct(A.eval.normal.rate), "fp", null,
-      `на ${A.eval.normal.total} обычных · мошенники найдены ${pct(A.eval.scam.rate)} из ${A.eval.scam.total}`]
+      `на ${A.eval.normal.total} обычных · словарь без LLM ловит ${pct(A.eval.scam.rate)} из ${A.eval.scam.total} схем`]
       : ["Ложные паузы", pct(m.false_pause_rate || 0), "fp"],
   ];
   $("#metrics").innerHTML = tiles.map(([l, v, k, c, sub]) => `<div class="metric ${flash === k ? "flash" : ""}" ${sub ? `title="${esc(sub)}"` : ""}><div class="label leading-snug">${l}</div>
