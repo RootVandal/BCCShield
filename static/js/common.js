@@ -22,7 +22,8 @@ const KEYS = (() => {
   const q = new URLSearchParams(location.search);
   let changed = false;
   for (const [param, name] of [["key", "bcc.adminKey"], ["rk", "bcc.relativeKey"]]) {
-    if (q.has(param)) { store.set(name, q.get(param)); q.delete(param); changed = true; }
+    // Keys never contain spaces: "+" from an unencoded base64 key arrives as a space, put it back.
+    if (q.has(param)) { store.set(name, q.get(param).trim().replace(/ /g, "+")); q.delete(param); changed = true; }
   }
   if (changed) history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
   return { admin: store.get("bcc.adminKey"), relative: store.get("bcc.relativeKey") };
