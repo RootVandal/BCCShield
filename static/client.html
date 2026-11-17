@@ -33,32 +33,14 @@
     .side-note li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 12px; }
     .side-note li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 6px;
       border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 11px; color: var(--text); font-family: "Geist Mono", monospace; }
-    /* presenter's remote */
-    .demo-panel { width: 360px; flex: none; align-self: center; max-height: calc(100vh - 72px); overflow-y: auto; color: var(--muted);
-      background: rgba(18,18,17,.82); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
-    .dhead { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-    .dnow { margin: 14px 0 4px; padding: 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); min-height: 64px; }
-    .dlabel { font-family: "Geist Mono", ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
-    .dnote { font-size: 12px; color: var(--faint); margin: -2px 0 8px; }
-    .dgroup { margin-top: 16px; }
-    .dstep { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; text-align: left;
-      border: 1px solid transparent; transition: background .15s, border-color .15s; color: var(--text); }
-    .dstep + .dstep { margin-top: 4px; }
-    .dstep:hover { background: var(--surface-2); border-color: var(--line); }
-    .dstep:disabled { opacity: .6; }
-    .dstep.active { background: rgba(47,210,122,.08); border-color: rgba(47,210,122,.35); }
-    .dnum { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex: none; font-size: 12px;
-      font-family: "Geist Mono", ui-monospace, monospace; border: 1px solid var(--line-strong); color: var(--muted); }
-    .dstep.done .dnum { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-    .dtitle { flex: 1; font-size: 13.5px; line-height: 1.3; }
-    .dgo { color: var(--faint); opacity: 0; transition: opacity .15s; } .dstep:hover .dgo { opacity: 1; }
-    .dfoot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
-    .dmini { height: 30px; padding: 0 11px; border-radius: 9px; font-size: 12px; border: 1px solid var(--line-strong); color: var(--text); background: var(--surface-2); }
-    .dmini:hover { background: var(--surface-3); }
-    .dlinkbtn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-    .dlink { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--accent); }
+    /* the numbered notes double as the presenter's buttons */
+    .side-note b { color: var(--text); font-weight: 500; }
+    .side-note li.step { cursor: pointer; border-radius: 8px; transition: color .15s; }
+    .side-note li.step:hover { color: var(--text); }
+    .side-note li.step:hover::before { border-color: var(--accent); color: var(--accent); }
+    .side-note li.done::before, .side-note li.done:hover::before { content: "✓"; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
     .disclaimer { position: fixed; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 11px; color: var(--faint); z-index: 1; pointer-events: none; }
-    @media (max-width: 1100px) { .phone-stage { flex-wrap: wrap; align-content: flex-start; } .demo-panel { order: 2; width: 390px; max-height: none; } .disclaimer { position: static; padding: 8px 16px 16px; } }
+    @media (max-width: 1100px) { .side-note { display: none; } .disclaimer { position: static; padding: 8px 16px 16px; } }
     /* iOS shows a call in progress as a green pill in place of the clock */
     #callpill { position: absolute; left: 16px; top: 14px; z-index: 40; }
     .call-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
@@ -69,7 +51,7 @@
 <body>
   <canvas class="sand" id="sand" aria-hidden="true" style="opacity:.7"></canvas>
   <div class="phone-stage">
-    <aside class="demo-panel" id="demo-panel" aria-label="Пульт демо для ведущего"></aside>
+    <aside class="side-note" id="demo-panel" aria-label="Подсказка ведущему"></aside>
     <div class="phone" id="phone">
       <div class="phone-notch"></div>
       <div class="phone-status"><span class="num" id="clock">9:41</span><span class="flex items-center gap-1.5 text-[12px]"><span id="ws-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-[color:var(--faint)]"></span><span>LTE</span></span></div>
