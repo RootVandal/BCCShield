@@ -86,7 +86,7 @@ canvas.sand { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0
 .chip.on { background: var(--text); color: var(--ink); border-color: transparent; }
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
 .pill::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
-.pill.low, .pill.completed { color: var(--accent); background: var(--accent-dim); }
+.pill.low, .pill.completed, .pill.decoy, .pill.decoy_done { color: var(--accent); background: var(--accent-dim); }
 .pill.medium, .pill.cooling, .pill.pending_relative { color: var(--warn); background: var(--warn-dim); }
 .pill.high, .pill.rejected, .pill.blocked { color: var(--danger); background: var(--danger-dim); }
 .pill.neutral { color: var(--muted); background: rgba(255,255,255,.06); }
