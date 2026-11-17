@@ -221,7 +221,7 @@ s.innerHTML=h;
 <h2 class="r" style="--i:1;font-size:64px;letter-spacing:-2px">Мошенник уговаривает одного человека. BCC&#160;Shield подключает семью.</h2>
 <div style="flex:1"></div>
 <div style="display:flex;flex-direction:column">
-<div class="lyr r" style="--i:2"><p class="k">01</p><p class="tt">Слышит звонок</p><p class="dd">Речь RU/KZ, LLM, сигнал оператора</p></div>
+<div class="lyr r" style="--i:2"><p class="k">01</p><p class="tt">Видит звонок</p><p class="dd">Незнакомый номер, 12 минут, AnyDesk. Без записи</p></div>
 <div class="lyr r" style="--i:3"><p class="k">02</p><p class="tt">Останавливает деньги</p><p class="dd">Перевод, кредит, наличные, депозит</p></div>
 <div class="lyr r" style="--i:4"><p class="k">03</p><p class="tt">Зовёт семью</p><p class="dd">Решение сына в Telegram</p></div>
 <div class="lyr r" style="--i:5"><p class="k">04</p><p class="tt">Находит дропов</p><p class="dd">Граф переводов и Антифрод-центр</p></div>
@@ -232,18 +232,50 @@ s.innerHTML=h;
 <div class="head"><p class="eyebrow r">Как это работает</p><h2 class="r" style="--i:1">От звонка до решения семьи</h2></div>
 <div style="flex:1"></div>
 <div style="display:flex;gap:12px;align-items:stretch">
-<div class="node r" style="--i:2;padding:28px;gap:14px"><p class="mono small green">01</p><h3 style="font-size:32px">Звонок</h3><p class="small">Микрофон на громкой связи или сигнал оператора связи</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
-<div class="node r" style="--i:3;padding:28px;gap:14px"><p class="mono small green">02</p><h3 style="font-size:32px">Риск звонка</h3><p class="small">109 фраз RU/KZ и LLM. Жёлтый экран с 50%, красный с 80%</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r" style="--i:2;padding:28px;gap:14px"><p class="mono small green">01</p><h3 style="font-size:32px">Звонок</h3><p class="small">Телефон сообщает банку: незнакомый номер, 12 минут</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
+<div class="node r" style="--i:3;padding:28px;gap:14px"><p class="mono small green">02</p><h3 style="font-size:32px">Риск звонка</h3><p class="small">Контекст звонка и сигнал оператора. Жёлтый экран с 50%, красный с 80%</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
 <div class="node r hl" style="--i:4;padding:28px;gap:14px"><p class="mono small green">03</p><h3 style="font-size:32px">Пауза</h3><p class="small">Перевод, кредит, наличные и депозит ждут решения</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
 <div class="node r" style="--i:5;padding:28px;gap:14px"><p class="mono small green">04</p><h3 style="font-size:32px">Семья решает</h3><p class="small">Запрос в Telegram. Нет ответа — 5 минут охлаждения</p></div><svg class="arrow-svg" viewBox="0 0 40 22" style="flex:none;align-self:center;width:40px;height:22px;" aria-hidden="true"><path d="M0 7h24V0l16 11-16 11v-7H0z" fill="#8d8b83"/></svg>
 <div class="node r" style="--i:6;padding:28px;gap:14px"><p class="mono small green">05</p><h3 style="font-size:32px">Граф дропов</h3><p class="small">Отклонённая карта → вся сеть → Антифрод-центр</p></div>
 </div>
 <div style="flex:1"></div>
 <div style="display:flex;gap:24px">
-<div class="card r" style="--i:7;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">Обычная жизнь не страдает</p><p class="small">Звонок врача, перевод сыну 40 000 ₸ проходят сразу. Ложных тревог — 3,6% на 28 обычных разговорах.</p></div>
-<div class="card r" style="--i:8;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">iOS и Android не отдают звонок</p><p class="small">Нацбанк подключает операторов связи к Антифрод-центру. BCC Shield уже принимает такой сигнал.</p></div>
+<div class="card r" style="--i:7;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">Обычная жизнь не страдает</p><p class="small">Звонит сын — риск 0. Курьер на минуту — тишина. Перевод сыну 40 000 ₸ проходит сразу.</p></div>
+<div class="card r" style="--i:8;flex:1;padding:32px;gap:10px"><p class="white" style="font-size:30px;font-weight:600">Разговор не записываем</p><p class="small">iOS CallKit и Android дают только факт звонка. Сигнал операторов для Антифрод-центра мы уже принимаем.</p></div>
 </div>
 <p class="source">Сигнал оператора: проект поправок Нацбанка РК, февраль 2026 (finratings.kz)</p>
+</section><section id="kaspi" class="foot">
+<img class="bgtex" src="sand-bg.jpg" alt="">
+<div class="head"><p class="eyebrow r">Отличие от Kaspi</p><h2 class="r" style="--i:1">У Kaspi семья подтверждает сумму. У нас семья видит мошенника</h2></div>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column">
+<div class="r" style="--i:2;display:flex;gap:48px;padding:0 0 18px">
+<p class="mono small" style="width:300px;flex:none"></p>
+<p class="mono small" style="width:560px;flex:none;color:var(--faint)">KASPI · С ОКТЯБРЯ 2025</p>
+<p class="mono small green" style="flex:1">BCC SHIELD</p>
+</div>
+<div class="r" style="--i:3;display:flex;gap:48px;padding:22px 0;border-top:1px solid var(--line)">
+<p class="white" style="width:300px;flex:none;font-weight:600">Когда срабатывает</p>
+<p style="width:560px;flex:none">Крупное снятие наличных, международный перевод</p>
+<p class="white" style="flex:1">12 минут на звонке с незнакомым номером, кредит и сразу перевод, карта-дроппер</p>
+</div>
+<div class="r" style="--i:4;display:flex;gap:48px;padding:22px 0;border-top:1px solid var(--line)">
+<p class="white" style="width:300px;flex:none;font-weight:600">Когда узнаёт семья</p>
+<p style="width:560px;flex:none">В момент операции</p>
+<p class="white" style="flex:1">Ещё во время звонка: «У мамы подозрительный звонок, 12 мин»</p>
+</div>
+<div class="r" style="--i:5;display:flex;gap:48px;padding:22px 0;border-top:1px solid var(--line)">
+<p class="white" style="width:300px;flex:none;font-weight:600">Что видит сын</p>
+<p style="width:560px;flex:none">Операцию и две кнопки</p>
+<p class="white" style="flex:1">Почему: схема, риск звонка, «на карту переводили 5 незнакомых людей»</p>
+</div>
+<div class="r" style="--i:6;display:flex;gap:48px;padding:22px 0;border-top:1px solid var(--line)">
+<p class="white" style="width:300px;flex:none;font-weight:600">После отказа</p>
+<p style="width:560px;flex:none">Операция отменена</p>
+<p class="green" style="flex:1">Карта помечена в графе — защищены все клиенты БЦК</p>
+</div>
+</div>
+<p class="source">Kaspi: digitalbusiness.kz, 03.10.2025. У БЦК такой функции пока нет</p>
 </section><section id="family" class="alt">
 <img class="bgtex" src="sand-bg.jpg" alt="">
 <div style="display:flex;gap:96px;flex:1">
@@ -278,7 +310,7 @@ s.innerHTML=h;
 <div class="phone danger">
 <div style="width:64px;height:64px;border-radius:32px;background:#ff5c4d;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="color:#fff;width:36px;height:36px" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
 <p class="t-xl">СТОП. Вам звонят мошенники</p>
-<p class="t">Риск 96% · схема «безопасный счёт»</p>
+<p class="t">Незнакомый номер · 12 мин · открыт AnyDesk</p>
 <p class="t">Банк никогда не просит переводить деньги.</p>
 <p class="btn white">Положить трубку</p>
 </div>
@@ -291,7 +323,7 @@ s.innerHTML=h;
 <div class="bubble">
 <p class="t" style="font-weight:600;color:#fff">Нужно ваше решение</p>
 <p class="t">Сауле переводит 2 млн ₸ на Kaspi •• 4417</p>
-<p class="t" style="color:#ffb1a8">• Звонок с риском 96%<br>• Получатель в дроп-сети</p>
+<p class="t" style="color:#ffb1a8">• Звонок с незнакомого номера, 12 мин<br>• На карту переводили 5 незнакомых людей</p>
 </div>
 <p class="btn ok">Подтвердить</p>
 <p class="btn no">Отклонить</p>
@@ -306,7 +338,7 @@ s.innerHTML=h;
 <div class="card r" style="--i:2;flex:1;padding:36px">
 <table style="font-size:28px">
 <tr class="hd"><th style="width:84%">Перевод 2 000 000 ₸ на Kaspi •• 4417</th><th style="text-align:right">Баллы</th></tr>
-<tr><td>Идёт звонок с риском мошенничества 96%</td><td style="text-align:right;color:var(--danger)">+53</td></tr>
+<tr><td>Звонок: незнакомый номер, 12 мин, открыт AnyDesk</td><td style="text-align:right;color:var(--danger)">+52</td></tr>
 <tr><td>Получатель связан с дроп-сетью</td><td style="text-align:right;color:var(--danger)">+30</td></tr>
 <tr><td>Новый получатель, сумма в 89 раз больше обычной</td><td style="text-align:right">+30</td></tr>
 <tr><td>Клиент 60+, реквизиты из буфера, форма за 3 секунды</td><td style="text-align:right">+15</td></tr>

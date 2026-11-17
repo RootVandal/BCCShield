@@ -50,6 +50,20 @@ class CallStartIn(BaseModel):
     client_id: int = 1
 
 
+class PhoneCallIn(BaseModel):
+    """What the bank app learns from the phone about a call (CallKit / TelephonyCallback). The demo can say the
+    call began some minutes ago, the way a scammer's call is already running when the client opens the app."""
+    state: Literal["start", "end"] = "start"
+    caller: str = Field(default="", max_length=40)
+    caller_kind: Literal["contact", "unknown", "hidden"] = "unknown"
+    incoming: bool = True
+    minutes_ago: float = Field(default=0, ge=0, le=180)
+
+
+class RemoteAppIn(BaseModel):
+    app: str | None = Field(default=None, max_length=24)
+
+
 class CallTextIn(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
 

@@ -46,6 +46,14 @@ const T = {
     loanCooling: "Кредит заморожен", loanCoolingText: "Сейчас идёт подозрительный звонок. Деньги поступят через 5 минут, если не отмените.",
     telecom: "Оператор связи: вам звонят с номера из базы мошенников. Не переводите и не снимайте деньги.",
     q2cash: "Вас просят снять деньги и передать курьеру, «на хранение» или купить валюту?",
+    callTile: "Звонок", phoneTitle: "Звонок на телефоне", phoneNone: "Сейчас звонка нет",
+    phoneHow: "Это видит любое приложение через iOS CallKit и Android: факт звонка, длительность и есть ли номер в контактах. Без микрофона и записи разговора.",
+    ctxRisk: "Риск по контексту", demoPhone: "Демо: что сообщает телефон", demoUnknown: "Незнакомый номер · идёт 12 мин",
+    demoHidden: "Скрытый номер · 3 мин", demoSon: "Звонит сын", demoRemote: "Открыт AnyDesk", demoHang: "Положить трубку",
+    speakerTitle: "Проверить разговор на громкой связи", speakerNote: "По желанию клиента: включите громкую связь, и BCC Shield разберёт фразы звонящего. Это дополнительный сигнал, щит работает и без него.",
+    speakerStart: "Проверить разговор", phoneMediumTitle: "Осторожно: подозрительный звонок",
+    phoneMediumText: "Если звонящий просит перевести деньги, взять кредит, назвать код или установить приложение — это мошенники. Банк так не делает.",
+    phoneHighTitle: "СТОП. Похоже, вам звонят мошенники", min: "мин", unknownNum: "Неизвестный номер", hiddenNum: "Скрытый номер",
   },
   kk: {
     hello: "Сәлеметсіз бе", balance: "Теңгерім", frozen: "шешімге дейін тоқтатылған", transfer: "Аударым", loan: "Несие",
@@ -93,6 +101,14 @@ const T = {
     loanCooling: "Несие тоқтатылды", loanCoolingText: "Қазір күдікті қоңырау жүріп жатыр. Ақша 5 минуттан кейін түседі, егер бас тартпасаңыз.",
     telecom: "Байланыс операторы: сізге алаяқтар базасындағы нөмірден қоңырау шалуда. Ақша аудармаңыз және шешпеңіз.",
     q2cash: "Сізден ақшаны шешіп, курьерге, «сақтауға» беруді немесе валюта сатып алуды сұрай ма?",
+    callTile: "Қоңырау", phoneTitle: "Телефондағы қоңырау", phoneNone: "Қазір қоңырау жоқ",
+    phoneHow: "Мұны кез келген қосымша iOS CallKit және Android арқылы көреді: қоңырау фактісі, ұзақтығы және нөмір контактілерде бар ма. Микрофонсыз және жазбасыз.",
+    ctxRisk: "Контекст бойынша қауіп", demoPhone: "Демо: телефон не хабарлайды", demoUnknown: "Бейтаныс нөмір · 12 мин",
+    demoHidden: "Жасырын нөмір · 3 мин", demoSon: "Ұлы қоңырау шалуда", demoRemote: "AnyDesk ашық", demoHang: "Тұтқаны қою",
+    speakerTitle: "Қатты дауыстағы әңгімені тексеру", speakerNote: "Клиенттің қалауы бойынша: қатты дауысты қосыңыз, BCC Shield қоңырау шалушының сөздерін талдайды. Бұл қосымша сигнал, қалқан онсыз да жұмыс істейді.",
+    speakerStart: "Әңгімені тексеру", phoneMediumTitle: "Абайлаңыз: күдікті қоңырау",
+    phoneMediumText: "Қоңырау шалушы ақша аударуды, несие алуды, кодты айтуды немесе қосымша орнатуды сұраса — бұл алаяқтар. Банк олай істемейді.",
+    phoneHighTitle: "ТОҚТА. Сізге алаяқтар қоңырау шалып жатқан сияқты", min: "мин", unknownNum: "Белгісіз нөмір", hiddenNum: "Жасырын нөмір",
   },
 };
 
@@ -173,7 +189,7 @@ function renderHome() {
     <div class="grid grid-cols-3 gap-2 mt-4">
       ${tile("transfer", t("transfer"), "transfer")}${tile("cash", t("cash"), "cash")}${tile("loan", t("loan"), "loan")}
       ${tile("deposit", t("deposit"), "deposit")}
-      ${tile("call", t("callGuard"), "call", callLive ? `<span class="live absolute top-3 right-3"></span>` : "")}
+      ${tile("call", t("callTile"), "call", callLive ? `<span class="live absolute top-3 right-3"></span>` : "")}
       ${tile("shield", t("shield"), "settings")}
     </div>
     <div class="flex items-center justify-between mt-6 mb-1"><h3 class="text-[15px] font-semibold">${t("history")}</h3>
@@ -262,33 +278,76 @@ function renderDeposit() {
   </div>`;
 }
 
-function renderCall() {
-  if (!S.call) {
-    return `${header(t("callGuard"))}<div class="px-5 pb-8 fade-in flex flex-col items-center text-center">
-      <div class="app-icon mt-8" style="width:76px;height:76px;border-radius:20px">${SHIELD_SVG.replace("<svg", '<svg width="40" height="40"')}</div>
-      <p class="text-[14px] muted mt-6 leading-relaxed">${t("callIdle")}</p>
-      <button class="btn btn-accent btn-lg btn-block mt-8" onclick="startCall(this)">${t("startCall")}</button>
-      <p class="text-[11.5px] faint mt-4">${t("privacy")}</p></div>`;
-  }
-  return `${header(t("callGuard"))}<div class="px-4 pb-8 fade-in">
-    <div class="card p-4 flex flex-col items-center">
-      <div id="gauge" class="w-full flex justify-center"></div>
-      <div id="scheme" class="text-[12.5px] muted -mt-1 h-5"></div>
-      <div class="w-full mt-2" id="spark"></div>
-      <div id="cats" class="flex flex-wrap gap-1 justify-center mt-2"></div>
-    </div>
-    <div class="flex items-center justify-between mt-4 mb-2"><span class="label">Лента разговора</span>
-      <span class="text-[11px] faint" id="llm-badge"></span></div>
-    <div id="feed" class="card p-3 h-[190px] scroll flex flex-col gap-2 text-[13.5px] leading-snug"></div>
-    <form class="flex gap-2 mt-3" onsubmit="sendPhrase(event)">
-      <input id="phrase" class="input h-10 text-[14px]" placeholder="${t("manual")}…" autocomplete="off">
-      <button class="btn btn-pale h-10" type="submit">${t("sendPhrase")}</button></form>
-    <button id="mic-btn" class="btn btn-block mt-2" onclick="toggleMic()">${ICONS.mic}<span>${t("mic")}</span></button>
-    <div class="label mt-5 mb-2">${t("scenarios")}</div>
-    <div class="flex flex-col gap-1.5" id="scen"></div>
-    <button class="btn btn-danger btn-block mt-5" onclick="endCall('ended')">${t("endCall")}</button>
-    <p class="text-[11px] faint text-center mt-3">${t("privacy")}</p></div>`;
+const isPhone = () => S.call?.source === "phone";
+const callerName = (p) => p.caller || (p.caller_kind === "hidden" ? t("hiddenNum") : t("unknownNum"));
+const mmss = (from) => { const s = Math.max(0, Math.round((Date.now() - new Date(from)) / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+
+// The phone call as the bank app sees it (CallKit / TelephonyCallback): no audio, only the fact and its context.
+function phoneCard() {
+  const p = isPhone() ? S.call.phone : null;
+  const remote = S.client.remote_app;
+  const factors = (S.call?.context || []).filter((f) => f.points > 0 || f.code === "caller_contact");
+  return `<div class="card p-4">
+    <div class="flex items-center justify-between"><span class="label">${t("phoneTitle")}</span>
+      ${p ? `<span class="pill ${S.call.level === "high" ? "high" : S.call.level === "medium" ? "medium" : "low"} num">${t("ctxRisk")} ${pct(S.call.context_risk || 0)}</span>` : ""}</div>
+    ${p ? `<div class="flex items-center gap-3 mt-3"><div class="avatar" style="background:${p.caller_kind === "contact" ? "var(--accent-dim)" : "var(--danger-dim)"};color:${p.caller_kind === "contact" ? "var(--accent)" : "var(--danger)"}">${ICONS.call.replace("<svg", '<svg width="16" height="16"')}</div>
+        <div class="flex-1 min-w-0"><div class="text-[15px] font-semibold truncate">${esc(callerName(p))}</div>
+          <div class="text-[12px] muted"><span class="num" data-since="${esc(p.started_at)}">${mmss(p.started_at)}</span> · ${p.incoming ? "входящий" : "исходящий"}</div></div></div>
+      <ul class="mt-3 flex flex-col gap-1.5 text-[12.5px]">${factors.map((f) => `<li class="flex gap-2 justify-between"><span>${esc(reasonText(f))}</span><span class="num faint">${f.points ? "+" + Math.round(f.points * 100) : ""}</span></li>`).join("")}</ul>`
+      : `<p class="text-[13.5px] muted mt-2">${t("phoneNone")}${remote ? ` · <span style="color:var(--danger)">${esc(remote)}</span>` : ""}</p>`}
+    <p class="text-[11.5px] faint mt-3 leading-snug">${t("phoneHow")}</p></div>`;
 }
+
+function demoPhoneControls() {
+  const remote = S.client.remote_app;
+  return `<div class="label mt-5 mb-2">${t("demoPhone")}</div>
+    <div class="grid grid-cols-2 gap-1.5">
+      <button class="chip justify-center" onclick="phoneCall({caller:'+7 701 ••• 45 67', caller_kind:'unknown', minutes_ago:12})">📞 ${t("demoUnknown")}</button>
+      <button class="chip justify-center" onclick="phoneCall({caller:'', caller_kind:'hidden', minutes_ago:3})">🕶 ${t("demoHidden")}</button>
+      <button class="chip justify-center" onclick="phoneCall({caller:'Айдар (сын)', caller_kind:'contact', minutes_ago:4})">👨 ${t("demoSon")}</button>
+      <button class="chip justify-center ${remote ? "on" : ""}" onclick="remoteApp(${remote ? "null" : "'AnyDesk'"})">🖥 ${t("demoRemote")}</button>
+    </div>
+    ${S.call ? `<button class="btn btn-danger btn-block mt-2" onclick="endCall('hangup')">📵 ${t("demoHang")}</button>` : ""}`;
+}
+
+function renderCall() {
+  const speaker = S.call && (S.call.speech_risk > 0 || S.speakerOpen);
+  return `${header(t("callTile"))}<div class="px-4 pb-8 fade-in">
+    ${phoneCard()}
+    ${demoPhoneControls()}
+    <div class="card-2 p-4 mt-5">
+      <div class="flex items-center gap-2">${ICONS.mic}<span class="text-[14px] font-semibold">${t("speakerTitle")}</span></div>
+      <p class="text-[12px] muted mt-1.5 leading-snug">${t("speakerNote")}</p>
+      ${speaker ? `<div class="mt-3 flex flex-col items-center">
+        <div id="gauge" class="w-full flex justify-center"></div>
+        <div id="scheme" class="text-[12.5px] muted -mt-1 h-5"></div>
+        <div class="w-full mt-2" id="spark"></div>
+        <div id="cats" class="flex flex-wrap gap-1 justify-center mt-2"></div></div>
+      <div class="flex items-center justify-between mt-3 mb-2"><span class="label">Лента разговора</span>
+        <span class="text-[11px] faint" id="llm-badge"></span></div>
+      <div id="feed" class="card p-3 h-[150px] scroll flex flex-col gap-2 text-[13.5px] leading-snug"></div>
+      <form class="flex gap-2 mt-3" onsubmit="sendPhrase(event)">
+        <input id="phrase" class="input h-10 text-[14px]" placeholder="${t("manual")}…" autocomplete="off">
+        <button class="btn btn-pale h-10" type="submit">${t("sendPhrase")}</button></form>
+      <button id="mic-btn" class="btn btn-block mt-2" onclick="toggleMic()">${ICONS.mic}<span>${t("mic")}</span></button>
+      <div class="label mt-4 mb-2">${t("scenarios")}</div>
+      <div class="flex flex-col gap-1.5" id="scen"></div>
+      <p class="text-[11px] faint text-center mt-3">${t("privacy")}</p>`
+      : `<button class="btn btn-block mt-3" onclick="startCall(this)">${t("speakerStart")}</button>`}
+    </div></div>`;
+}
+
+// iOS-style green pill at the top of the screen while a phone call is on.
+function updatePill() {
+  const el = $("#callpill");
+  if (!el) return;
+  $("#clock").style.visibility = isPhone() ? "hidden" : "";
+  if (!isPhone()) { el.innerHTML = ""; return; }
+  const p = S.call.phone;
+  const hot = S.call.level !== "low";
+  el.innerHTML = `<button class="call-pill ${hot ? "hot" : ""}" onclick="go('call')" aria-label="${esc(callerName(p))}">${ICONS.call.replace("<svg", '<svg width="12" height="12"')}<span class="num">${mmss(p.started_at)}</span></button>`;
+}
+setInterval(() => { updatePill(); document.querySelectorAll("[data-since]").forEach((e) => (e.textContent = mmss(e.dataset.since))); }, 1000);
 
 function renderScenarios() {
   const el = $("#scen");
@@ -302,7 +361,7 @@ function renderScenarios() {
 }
 
 function updateCallView() {
-  if (S.screen !== "call" || !S.call) return;
+  if (S.screen !== "call" || !S.call || !$("#gauge")) return;
   const c = S.call;
   $("#gauge").innerHTML = gaugeSVG(c.risk, 230, t("risk"));
   $("#scheme").textContent = c.risk >= 0.5 && c.scheme_label ? `${t("scheme")}: ${S.lang === "kk" ? c.scheme_label.kk : c.scheme_label.ru}` : "";
@@ -426,6 +485,7 @@ function render() {
   $("#screen").innerHTML = html;
   if (S.screen === "call") { renderScenarios(); updateCallView(); }
   if (S.screen === "transfer") bindTransferForm();
+  updatePill();
 }
 
 function go(screen) {
@@ -447,12 +507,16 @@ function toast(text, kind = "neutral", ms = 4000) {
   setTimeout(() => el.remove(), ms);
 }
 
+// the alarm comes from the call's context (phone), not from words heard on the speakerphone
+const byPhone = () => isPhone() && !(S.call.speech_risk >= 0.5) && S.call.phone?.summary;
+
 function showMediumBanner() {
   vibrate([200, 100, 200]);
   overlay(`<div class="absolute left-3 right-3 top-[54px] z-50 rounded-2xl p-4 shake" style="background:#2b2208;border:1px solid rgba(242,179,61,.45)" role="alert">
     <div class="flex gap-3"><div class="text-[22px] leading-none">⚠️</div><div>
-      <div class="text-[15px] font-semibold" style="color:var(--warn)">${t("mediumTitle")}</div>
-      <div class="text-[13px] mt-1 text-[#f3e3bd] leading-snug">${t("mediumText")}</div></div></div>
+      <div class="text-[15px] font-semibold" style="color:var(--warn)">${t(byPhone() ? "phoneMediumTitle" : "mediumTitle")}</div>
+      ${byPhone() ? `<div class="text-[12.5px] mt-1 text-[#f3e3bd]/80">${esc(S.lang === "kk" ? S.call.phone.summary.kk : S.call.phone.summary.ru)}</div>` : ""}
+      <div class="text-[13px] mt-1 text-[#f3e3bd] leading-snug">${t(byPhone() ? "phoneMediumText" : "mediumText")}</div></div></div>
     <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn btn-danger btn-sm h-9" onclick="endCall('hangup')">${t("hangup")}</button>
       <button class="btn btn-sm h-9" onclick="dismissAlert('medium')">${t("imSafe")}</button></div></div>`);
 }
@@ -465,8 +529,8 @@ function showHighScreen() {
     <div class="flex justify-between items-center"><div class="w-14 h-14 rounded-full grid place-items-center ring" style="background:var(--danger)">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
       ${langToggle()}</div>
-    <h2 class="text-[28px] leading-[1.1] font-semibold mt-6 text-white">${t("highTitle")}</h2>
-    <div class="mt-2 text-[13px] text-white/70">${t("risk")}: <b class="num text-white">${pct(S.call?.risk || 0)}</b>${sch ? ` · ${t("scheme")}: ${esc(sch)}` : ""}</div>
+    <h2 class="text-[28px] leading-[1.1] font-semibold mt-6 text-white">${t(byPhone() ? "phoneHighTitle" : "highTitle")}</h2>
+    <div class="mt-2 text-[13px] text-white/70">${t("risk")}: <b class="num text-white">${pct(S.call?.risk || 0)}</b>${byPhone() ? ` · ${esc(S.lang === "kk" ? S.call.phone.summary.kk : S.call.phone.summary.ru)}` : sch ? ` · ${t("scheme")}: ${esc(sch)}` : ""}</div>
     <ul class="mt-6 flex flex-col gap-3 text-[14.5px] text-white/90 leading-snug">
       <li class="flex gap-2.5"><span>✋</span><span>${t("highL1")}</span></li>
       <li class="flex gap-2.5"><span>🔒</span><span>${t("highL2")}</span></li>
@@ -638,14 +702,33 @@ async function takeLoan(btn) {
 
 async function startCall(btn) {
   btn.disabled = true;
+  S.speakerOpen = true;
   const snap = await api("/api/calls", { body: { client_id: CLIENT_ID } });
   setCall(snap);
   render();
 }
 
 function setCall(snap) {
-  S.call = { id: snap.call_id, risk: snap.risk, level: snap.level, history: snap.history || [], feed: S.call?.id === snap.call_id ? S.call.feed : [],
-    categories: S.call?.id === snap.call_id ? S.call.categories : {}, llm: snap.llm, scheme_label: S.call?.scheme_label };
+  const same = S.call?.id === snap.call_id;
+  S.call = { id: snap.call_id, risk: snap.risk, level: snap.level, history: snap.history || [], feed: same ? S.call.feed : [],
+    categories: same ? S.call.categories : {}, llm: snap.llm, scheme_label: same ? S.call.scheme_label : null,
+    source: snap.source || (same ? S.call.source : "speaker"), phone: snap.phone ?? (same ? S.call.phone : null),
+    context: snap.context ?? (same ? S.call.context : []), context_risk: snap.context_risk ?? 0, speech_risk: snap.speech_risk ?? 0 };
+  if (!same) S.speakerOpen = false;
+}
+
+// demo stand-ins for what the phone tells the bank app (in production: CallKit / TelephonyCallback events)
+async function phoneCall(body) {
+  try {
+    const snap = await api(`/api/clients/${CLIENT_ID}/phone-call`, { body: { state: "start", incoming: true, ...body } });
+    setCall(snap);
+    S.dismissed[snap.call_id] = {};
+    render();
+  } catch (e) { toast(esc(e.message), "danger"); }
+}
+
+async function remoteApp(app) {
+  await api(`/api/clients/${CLIENT_ID}/remote-access`, { body: { app } });
 }
 
 async function sendPhrase(e) {
@@ -666,6 +749,7 @@ async function endCall(outcome) {
   stopMic();
   if (S.call) await api(`/api/calls/${S.call.id}/end`, { body: { outcome } }).catch(() => {});
   S.call = null;
+  S.speakerOpen = false;
   closeOverlay();
   if (outcome === "hangup") toast("📵 Звонок завершён. Если нужно — позвоните в банк по номеру на карте.", "neutral", 5000);
   render();
@@ -735,13 +819,22 @@ function onEvent(type, d) {
     if (wasLang !== S.lang) render();
     return;
   }
+  if (type === "call_started" && d.client_id === CLIENT_ID) {
+    if (!S.call || S.call.id !== d.call_id) { setCall(d); render(); }
+    return;
+  }
   if (type === "call_update" && d.client_id === CLIENT_ID) {
-    if (!S.call || S.call.id !== d.call_id) setCall({ call_id: d.call_id, risk: d.risk, level: d.level, history: d.history });
+    if (!S.call || S.call.id !== d.call_id) setCall({ call_id: d.call_id, risk: d.risk, level: d.level, history: d.history, source: d.phone ? "phone" : "speaker" });
     const c = S.call;
-    Object.assign(c, { risk: d.risk, level: d.level, history: d.history, categories: d.categories, llm: d.llm, scheme_label: d.scheme_label });
-    c.feed.push({ ...d.fragment, source: d.source });
-    c.feed = c.feed.slice(-12);
-    if (S.screen === "call") updateCallView(); else if (S.screen === "home") render();
+    Object.assign(c, { risk: d.risk, level: d.level, history: d.history });
+    if (d.phone !== undefined) Object.assign(c, { phone: d.phone, source: d.phone ? "phone" : c.source, context: d.context, context_risk: d.context_risk });
+    if (d.fragment) {
+      Object.assign(c, { categories: d.categories, llm: d.llm, scheme_label: d.scheme_label, speech_risk: d.speech_risk });
+      c.feed.push({ ...d.fragment, source: d.source });
+      c.feed = c.feed.slice(-12);
+    }
+    if (S.screen === "call") { if (d.fragment && $("#gauge")) updateCallView(); else render(); } else if (S.screen === "home") render();
+    updatePill();
     const dis = S.dismissed[c.id] || {};
     if (d.level === "high" && !dis.high && !S.pending) showHighScreen();
     else if (d.level === "medium" && !dis.medium && !$("#overlay").innerHTML) showMediumBanner();

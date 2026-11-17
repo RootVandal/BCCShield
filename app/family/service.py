@@ -68,6 +68,7 @@ def client_state(db: Session, client: Client) -> dict:
         "contacts": [contacts.serialize(c, with_code=True) for c in people],
         "pending_loans": [serialize_loan(l) for l in pending_loans],
         "active_call_id": call.id if call else None,
+        "remote_app": client.remote_app,
     }
 
 
@@ -82,9 +83,12 @@ def danger_reasons(db: Session, client: Client) -> list[dict]:
     call = (db.query(CallSession).filter_by(client_id=client.id, status="active")
             .order_by(CallSession.started_at.desc()).first())
     if call and call.risk_score >= 0.5:
-        p = f"{round(call.risk_score * 100)}%"
-        out.append({"code": "call_risk", "ru": f"Идёт звонок с риском мошенничества {p}",
-                    "kk": f"Алаяқтық қаупі {p} қоңырау жүріп жатыр"})
+        from app.risk.rules import call_line
+        ru, kk = call_line(call, client)
+        out.append({"code": "call_risk", "ru": ru, "kk": kk})
+    if client.remote_app and not (out and call.source == "phone"):  # a phone call's line already names it
+        out.append({"code": "remote_app", "ru": f"На телефоне открыт удалённый доступ ({client.remote_app})",
+                    "kk": f"Телефонда қашықтан қол жеткізу ашық ({client.remote_app})"})
     if engine.telecom_active(client):
         out.append({"code": "telecom_signal", "ru": "Оператор связи сообщил о подозрительном звонке («Телеком Антифрод»)",
                     "kk": "Байланыс операторы күдікті қоңырау туралы хабарлады («Телеком Антифрод»)"})

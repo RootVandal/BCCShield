@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.call_guard import keywords, llm
+from app.call_guard import context, keywords, llm
 from app.config import settings
 from app.models import CallSession, Client
 
@@ -101,55 +101,80 @@ async def process_text(db: Session, call: CallSession, text: str, source: str = 
 
     raw = 0.5 * kw + 0.5 * st.llm_score if st.llm_score is not None else kw
     st.score = round(smooth(st.score, raw), 3)
-    level = level_of(st.score)
-
-    scheme = (st.llm_verdict or {}).get("scheme") or guess_scheme(st.categories)
-    call.risk_score = st.score
-    call.risk_history = [*call.risk_history, {"t": datetime.now().isoformat(timespec="seconds"), "score": st.score}]
+    call.speech_risk = st.score
     call.matched_phrases = list(st.phrases)
     call.llm_verdict = st.llm_verdict
-
-    triggered = []
     client = db.get(Client, call.client_id)
-    for lvl, thr in (("medium", MEDIUM), ("high", HIGH)):
-        if st.score >= thr and lvl not in st.alerted:
-            st.alerted.add(lvl)
-            triggered.append(lvl)
-    if "high" in triggered and client.shield_enabled:
-        client.protection_mode = "on"
-    db.commit()
-
+    event = apply_risk(db, call, client, context.combine(call.context_risk or 0, st.score))
+    scheme = (st.llm_verdict or {}).get("scheme") or guess_scheme(st.categories)
     return {
-        "call_id": call.id,
-        "client_id": call.client_id,
+        **event,
         "source": source,
         "fragment": {"text": text, "segments": keywords.highlight(text, matches)},
         "matches": [{"phrase": m.phrase, "category": m.category,
                      "label": keywords.CATEGORY_LABELS[m.category]} for m in matches],
         "categories": {c: keywords.CATEGORY_LABELS[c] for c in st.categories},
         "kw_score": kw,
+        "speech_risk": st.score,
         "llm": st.llm_verdict,
-        "risk": st.score,
-        "level": level,
         "scheme": scheme,
         "scheme_label": SCHEME_LABELS.get(scheme, SCHEME_LABELS["other"]),
-        "history": call.risk_history[-60:],
-        "triggered": triggered,
-        "protection_mode": client.protection_mode,
     }
 
 
-def call_snapshot(call: CallSession) -> dict:
-    st = _states.get(call.id)
+def apply_risk(db: Session, call: CallSession, client: Client, score: float) -> dict:
+    """Store the call's risk (context ⊕ speech), fire each threshold once, switch protection mode on at «high»."""
+    st = get_state(call.id)
+    call.risk_score = score
+    last = call.risk_history[-1]["score"] if call.risk_history else None
+    if last != score:
+        call.risk_history = [*call.risk_history, {"t": datetime.now().isoformat(timespec="seconds"), "score": score}]
+    triggered = []
+    for lvl, thr in (("medium", MEDIUM), ("high", HIGH)):
+        if score >= thr and lvl not in st.alerted:
+            st.alerted.add(lvl)
+            triggered.append(lvl)
+    if "high" in triggered and client.shield_enabled:
+        client.protection_mode = "on"
+    db.commit()
     return {
         "call_id": call.id,
         "client_id": call.client_id,
+        "risk": score,
+        "level": level_of(score),
+        "history": call.risk_history[-60:],
+        "triggered": triggered,
+        "protection_mode": client.protection_mode,
+        **phone_info(call, client),
+    }
+
+
+def phone_info(call: CallSession, client: Client) -> dict:
+    """The phone-call part of a snapshot: who is calling and why the context is risky."""
+    if call.source != "phone":
+        return {"phone": None, "context_risk": call.context_risk or 0, "context": context.factors(None, client)}
+    ru, kk = context.describe(call, client)
+    return {"phone": {"caller": call.caller, "caller_kind": call.caller_kind, "incoming": call.incoming,
+                      "started_at": call.started_at, "minutes": context.minutes(call), "summary": {"ru": ru, "kk": kk}},
+            "context_risk": call.context_risk or 0, "context": context.factors(call, client)}
+
+
+def call_snapshot(call: CallSession, client: Client | None = None) -> dict:
+    st = _states.get(call.id)
+    snap = {
+        "call_id": call.id,
+        "client_id": call.client_id,
         "status": call.status,
+        "source": call.source or "speaker",
         "risk": call.risk_score,
         "level": level_of(call.risk_score),
+        "speech_risk": call.speech_risk or 0,
         "history": call.risk_history[-60:],
         "matched_phrases": call.matched_phrases,
         "llm": call.llm_verdict,
         "fragments": [t for _, t in st.fragments] if st else [],
         "started_at": call.started_at,
     }
+    if client is not None:
+        snap.update(phone_info(call, client))
+    return snap

@@ -15,7 +15,7 @@ const CONTRIB_RU = {
 };
 const RULE_RU = { call_risk: "Звонок", recent_loan: "Кредит → перевод", risky_recipient: "Получатель в графе", new_recipient: "Новый получатель",
   unusual_amount: "Нетипичная сумма", night_time: "Ночь", elderly: "Возраст 60+", pasted: "Вставка из буфера", rushed: "Спешка",
-  protection_mode: "Режим защиты", telecom_signal: "Сигнал оператора", cash_out: "Снятие наличных", deposit_early: "Закрытие депозита",
+  protection_mode: "Режим защиты", telecom_signal: "Сигнал оператора", remote_app: "Удалённый доступ", cash_out: "Снятие наличных", deposit_early: "Закрытие депозита",
   family_amount: "Правило семьи: сумма", family_new: "Правило семьи: новый получатель", answer_on_call: "Ответ: идёт звонок", answer_safe_account: "Ответ: «безопасный счёт»", answer_impersonation: "Ответ: «банк/полиция»", shield_off: "Щит выключен" };
 
 // ---------- metrics -----------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ function renderMetrics(flash) {
     ["Precision графа", (m.precision ?? 0).toFixed(2), "p"],
     ["Recall графа", (m.recall ?? 0).toFixed(2), "r"],
     // honest number from the evaluation set (app/eval.py) instead of a rate counted on three demo calls
-    A.eval ? ["Ложные тревоги звонков", pct(A.eval.normal.rate), "fp", null,
+    A.eval ? ["Ложные тревоги проверки речи", pct(A.eval.normal.rate), "fp", null,
       `на ${A.eval.normal.total} обычных · словарь без LLM ловит ${pct(A.eval.scam.rate)} из ${A.eval.scam.total} схем`]
       : ["Ложные паузы", pct(m.false_pause_rate || 0), "fp"],
   ];
@@ -52,6 +52,7 @@ function renderCalls() {
         <span class="text-[13.5px]">${esc(c.client || "Клиент #" + c.client_id)}</span></div>
         <span class="num text-[18px] font-semibold" style="color:${riskColor(c.risk)}">${pct(c.risk)}</span></div>
       <div class="mt-1.5">${sparkSVG((c.history || []).map((h) => h.score), 300, 34)}</div>
+      ${c.phone ? `<div class="text-[12px] muted mt-1">📱 ${esc(c.phone.summary.ru)}</div>` : ""}
       ${c.scheme ? `<div class="text-[12px] muted mt-1">Схема: ${esc(c.scheme)}</div>` : ""}
       <div class="flex flex-wrap gap-1 mt-1.5">${(c.matched_phrases || []).slice(-6).map((p) => `<span class="pill high">${esc(p)}</span>`).join("")}</div>
       ${c.llm?.explanation_ru ? `<div class="text-[12px] muted mt-1.5">LLM: ${esc(c.llm.explanation_ru)}</div>` : ""}</div>`).join("")
@@ -252,6 +253,10 @@ const simulateSignal = (btn, id) => withBtn(btn, async () => {
   const r = await api("/api/antifraud/simulate-incoming", { body: id ? { account_id: id } : {} });
   if (r.warned_clients.length) toastA(`📡 Сигнал АФЦ: ${esc(r.signal.payload.bank)} ${esc(r.signal.payload.card)}. Предупреждены клиенты: ${r.warned_clients.map((c) => esc(c.name)).join(", ")}`);
 });
+const phoneCallDemo = (btn) => withBtn(btn, async () => {
+  const s = await api(`/api/clients/${DEMO_CLIENT_ID}/phone-call`, { body: { state: "start", caller: "+7 701 ••• 45 67", caller_kind: "unknown", minutes_ago: 12 } });
+  toastA(`📱 Телефон Сауле: ${esc(s.phone.summary.ru)}. Риск по контексту ${pct(s.risk)} — без записи разговора.`);
+});
 const telecomSignal = (btn) => withBtn(btn, async () => {
   await api(`/api/clients/${DEMO_CLIENT_ID}/telecom-signal`, { body: {} });
   toastA("📶 Оператор связи сообщил банку: Сауле звонят с номера из базы мошенников. Включён режим защиты, доверенные лица уведомлены.");
@@ -279,7 +284,8 @@ function onEvent(type, d) {
   if (type === "call_ended") { delete A.calls[d.call_id]; renderCalls(); }
   if (type === "antifraud_signal") loadJournal();
   if (type === "graph_updated") { clearTimeout(graphTimer); graphTimer = setTimeout(() => loadGraph(d.focus), 250); }
-  if (type === "relative_alert" && d.source !== "telecom") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
+  if (type === "relative_alert" && d.source === "phone") toastA(`📱 ${esc(d.client)}: ${esc(d.summary?.ru || "")} · риск ${pct(d.risk)}. Доверенное лицо уведомлено ещё до перевода.`);
+  else if (type === "relative_alert" && d.source !== "telecom") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
 }
 
 async function init() {

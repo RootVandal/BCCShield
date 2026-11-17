@@ -23,6 +23,8 @@ class Client(Base):
     deposit: Mapped[float] = mapped_column(Float, default=0)                  # savings deposit (can be closed early)
     # "Telecom Antifraud" pilot: the mobile operator reports a suspicious call to the bank before any transfer
     telecom_alert_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # a remote-access app (AnyDesk, RustDesk…) is running on the phone: the bank app sees it, no audio involved
+    remote_app: Mapped[str | None] = mapped_column(String(24), nullable=True)
 
 
 class TrustedContact(Base):
@@ -107,6 +109,14 @@ class CallSession(Base):
     matched_phrases: Mapped[list] = mapped_column(JSON, default=list)
     llm_verdict: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active")  # active/ended
+    # "phone": the call itself, as iOS CallKit / Android TelephonyCallback report it (no audio, no number on iOS);
+    # "speaker": the optional check of a speakerphone conversation. A phone call can get a speaker check on top.
+    source: Mapped[str] = mapped_column(String(12), default="speaker")
+    caller: Mapped[str] = mapped_column(String(40), default="")
+    caller_kind: Mapped[str] = mapped_column(String(12), default="")   # contact / unknown / hidden
+    incoming: Mapped[bool] = mapped_column(Boolean, default=True)
+    context_risk: Mapped[float] = mapped_column(Float, default=0)       # from the call's context
+    speech_risk: Mapped[float] = mapped_column(Float, default=0)        # from the speakerphone check, if any
 
 
 class AntifraudSignal(Base):

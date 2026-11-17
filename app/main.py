@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app import seed as seed_mod
 from app.antifraud import mock_center
 from app.call_guard import analyzer, scenarios, stt
+from app.call_guard import context as cctx
 from app.config import BASE_DIR, settings
 from app.db import SessionLocal, engine, get_db, upgrade_schema
 from app.family import contacts, service, telegram_bot
@@ -23,7 +24,7 @@ from app.graph.generator import SIGNAL_CARD
 from app.models import Account, CallSession, Client, Loan, Transfer, TrustedContact
 from app.risk.engine import find_or_create_recipient
 from app.schemas import (AnswerIn, OperationIn, TelecomSignalIn, CallStartIn, CallTextIn, ClientIn, ContactIn, DecisionIn, LanguageIn, LoanIn,
-                         RulesIn, ScenarioIn, ShieldIn, SignalIn, SimulateSignalIn, TransferIn)
+                         PhoneCallIn, RemoteAppIn, RulesIn, ScenarioIn, ShieldIn, SignalIn, SimulateSignalIn, TransferIn)
 from app.security import admin_key, admin_key_from_env, check_admin, check_init_data, is_local, relative_key
 from app.ws import hub
 
@@ -41,6 +42,8 @@ async def cooling_loop():
         try:
             with SessionLocal() as db:
                 await service.tick(db)
+                for call in db.query(CallSession).filter_by(status="active", source="phone").all():
+                    await refresh_phone_call(db, call)  # minutes on the line add risk
         except Exception:
             log.exception("cooling tick failed")
 
@@ -569,7 +572,7 @@ def list_scenarios():
 
 @app.get("/api/calls/active")
 def active_calls(db: Session = Depends(get_db)):
-    return [analyzer.call_snapshot(c) for c in db.query(CallSession).filter_by(status="active")]
+    return [analyzer.call_snapshot(c, db.get(Client, c.client_id)) for c in db.query(CallSession).filter_by(status="active")]
 
 
 @app.post("/api/calls")
@@ -580,7 +583,7 @@ async def start_call(body: CallStartIn, db: Session = Depends(get_db)):
         call = CallSession(client_id=c.id)
         db.add(call)
         db.commit()
-    snap = analyzer.call_snapshot(call)
+    snap = analyzer.call_snapshot(call, c)
     await hub.broadcast("call_started", snap)
     await service.push_client(db, c)
     return snap
@@ -590,21 +593,94 @@ async def handle_text(db: Session, call: CallSession, text: str, source: str) ->
     if call.status != "active":
         raise HTTPException(409, "Звонок уже завершён")
     event = await analyzer.process_text(db, call, text, source)
+    await after_risk(db, call, event)
+    return event
+
+
+async def after_risk(db: Session, call: CallSession, event: dict):
+    """Broadcast a new call risk; tell the family when a threshold is crossed for the first time."""
     await hub.broadcast("call_update", event)
     client = db.get(Client, call.client_id)
-    if "high" in event["triggered"]:
+    trig = event["triggered"]
+    phone = event.get("phone")
+    heard = (event.get("speech_risk") or 0) >= analyzer.HIGH
+    # The family is called on «high», or already on «medium» when the phone itself says the client is on a long
+    # call with a stranger and has opened the bank app: that is the moment Kaspi's trusted contact never sees.
+    level = "high" if "high" in trig else "medium" if ("medium" in trig and phone) else None
+    if level:
         tc = next(iter(contacts.active_contacts(db, client.id)), None)
+        scheme = event.get("scheme_label") or {"ru": "подозрительный звонок", "kk": "күдікті қоңырау"}
         alert = {"id": len(relative_alerts) + 1, "client_id": client.id, "client": client.name,
-                 "phone": client.phone, "scheme": event["scheme_label"], "risk": event["risk"],
-                 "call_id": call.id, "at": datetime.now(),
-                 "relation": tc.relation if tc else None}
+                 "phone": client.phone, "scheme": scheme, "risk": event["risk"], "level": level,
+                 "call_id": call.id, "at": datetime.now(), "relation": tc.relation if tc else None,
+                 "source": "speech" if heard or not phone else "phone",
+                 "summary": phone["summary"] if phone else None}
         relative_alerts.append(alert)
         await hub.broadcast("relative_alert", alert)
-        await telegram_bot.notify_call_alert(db, client, event["scheme_label"]["ru"])
-    if event["triggered"]:
+        if alert["source"] == "speech":
+            await telegram_bot.notify_call_alert(db, client, scheme["ru"])
+        else:
+            await telegram_bot.notify_call_context(db, client, phone["summary"]["ru"], level)
+    if trig:
         await service.push_client(db, client)
         await hub.broadcast("metrics", service.metrics(db))
+
+
+async def refresh_phone_call(db: Session, call: CallSession, force: bool = False) -> dict | None:
+    """Recompute the context risk of a phone call (it grows with the minutes on the line)."""
+    client = db.get(Client, call.client_id)
+    ctx = cctx.risk(call, client)
+    if not force and abs(ctx - (call.context_risk or 0)) < 1e-6:
+        return None
+    call.context_risk = ctx
+    st = analyzer.get_state(call.id)
+    event = analyzer.apply_risk(db, call, client, cctx.combine(ctx, call.speech_risk or 0))
+    if call.speech_risk:
+        scheme = (call.llm_verdict or {}).get("scheme") or analyzer.guess_scheme(st.categories)
+        event["scheme_label"] = analyzer.SCHEME_LABELS.get(scheme, analyzer.SCHEME_LABELS["other"])
+    await after_risk(db, call, event)
     return event
+
+
+def active_call(db: Session, client_id: int) -> CallSession | None:
+    return (db.query(CallSession).filter_by(client_id=client_id, status="active")
+            .order_by(CallSession.started_at.desc()).first())
+
+
+@app.post("/api/clients/{client_id}/phone-call")
+async def phone_call(client_id: int, body: PhoneCallIn, db: Session = Depends(get_db)):
+    """The bank app reports a phone call it observed through CallKit / TelephonyCallback. No audio, no recording:
+    only that a call is on, who the caller is relative to the contacts, and for how long."""
+    c = get_client(db, client_id)
+    call = active_call(db, c.id)
+    if body.state == "end":
+        if call:
+            return await end_call(call.id, AnswerIn(outcome="ended"), db)
+        return {"status": "no_call"}
+    if call:  # a new call replaces the old one (the demo switches between callers)
+        await end_call(call.id, AnswerIn(outcome="replaced"), db)
+    call = CallSession(client_id=c.id, source="phone", caller=body.caller or "", caller_kind=body.caller_kind,
+                       incoming=body.incoming, started_at=datetime.now() - timedelta(minutes=body.minutes_ago))
+    db.add(call)
+    db.commit()
+    snap = analyzer.call_snapshot(call, c)
+    await hub.broadcast("call_started", snap)
+    await refresh_phone_call(db, call, force=True)
+    await service.push_client(db, c)
+    return analyzer.call_snapshot(call, c)
+
+
+@app.post("/api/clients/{client_id}/remote-access")
+async def remote_access(client_id: int, body: RemoteAppIn, db: Session = Depends(get_db)):
+    """The bank app found a remote-access app running (Android: installed packages / accessibility services)."""
+    c = get_client(db, client_id)
+    c.remote_app = (body.app or "").strip() or None
+    db.commit()
+    call = active_call(db, c.id)
+    if call and call.source == "phone":
+        await refresh_phone_call(db, call, force=True)
+    await service.push_client(db, c)
+    return {"remote_app": c.remote_app}
 
 
 @app.post("/api/calls/{call_id}/text")

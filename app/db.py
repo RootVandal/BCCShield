@@ -33,7 +33,10 @@ UPGRADES = {
     },
     "loans": {"status": "VARCHAR(16) DEFAULT 'approved'", "decided_by": "VARCHAR(32)", "cooling_until": "DATETIME",
               "reasons": "JSON DEFAULT '[]'"},
-    "clients": {"deposit": "FLOAT DEFAULT 0", "telecom_alert_until": "DATETIME"},
+    "clients": {"deposit": "FLOAT DEFAULT 0", "telecom_alert_until": "DATETIME", "remote_app": "VARCHAR(24)"},
+    "call_sessions": {"source": "VARCHAR(12) DEFAULT 'speaker'", "caller": "VARCHAR(40) DEFAULT ''",
+                      "caller_kind": "VARCHAR(12) DEFAULT ''", "incoming": "BOOLEAN DEFAULT 1",
+                      "context_risk": "FLOAT DEFAULT 0", "speech_risk": "FLOAT DEFAULT 0"},
     "transfers": {"kind": "VARCHAR(16) DEFAULT 'transfer'"},
 }
 

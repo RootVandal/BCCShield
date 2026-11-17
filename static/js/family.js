@@ -39,8 +39,9 @@ function wardCard(w) {
 function alertCards(w) {
   return w.alerts.slice().reverse().slice(0, 2).map((a) => `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#3a0f0a,#24100d);border:1px solid rgba(255,92,77,.45)">
     <div class="flex items-start gap-3"><div class="text-[22px] leading-none">⚠️</div><div class="flex-1">
-      <div class="text-[15px] font-semibold text-white leading-snug">${esc(firstName(a.client))} сейчас звонят мошенники</div>
+      <div class="text-[15px] font-semibold text-white leading-snug">${esc(firstName(a.client))} ${a.level === "medium" ? "сейчас подозрительный звонок" : "сейчас звонят мошенники"}</div>
       <div class="text-[13px] text-white/75 mt-1">${a.source === "telecom" ? `📡 Сообщил оператор связи («Телеком Антифрод») · ${timeHM(a.at)}`
+        : a.source === "phone" ? `📱 ${esc(a.summary?.ru || "")} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)} · ${timeHM(a.at)}`
         : `Схема: ${esc(a.scheme.ru)} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)}${F.calls?.[a.client_id] ? " сейчас" : ""} · ${timeHM(a.at)}`}</div></div></div>
     <a class="btn btn-block mt-3" style="background:#fff;color:#7a1109;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить</a></div>`).join("");
 }

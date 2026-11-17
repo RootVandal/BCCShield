@@ -267,7 +267,18 @@ async def notify_call_alert(db, client, scheme_ru: str):
                                     "текущее значение в семейном кабинете.", with_app=True)
 
 
-VERB = {"transfer": "переводит", "cash": "снимает наличными", "deposit": "досрочно закрывает депозит на"}
+async def notify_call_context(db, client, summary_ru: str, level: str):
+    """A phone call the bank app noticed (CallKit / Android), without audio: the family hears of it before any
+    transfer — this is what Kaspi's trusted contact cannot do."""
+    first = client.name.split()[0]
+    head = (f"⚠️ {first} сейчас звонят мошенники" if level == "high"
+            else f"⚠️ У {first} сейчас подозрительный звонок")
+    await _broadcast(db, client.id, f"{head}: {summary_ru}.\nПозвоните ей: {client.phone}\n"
+                                    "Пока звонок идёт, кредит и рискованные переводы будут ждать вашего решения.",
+                     with_app=True)
+
+
+VERB = {"transfer":"переводит", "cash": "снимает наличными", "deposit": "досрочно закрывает депозит на"}
 # what the trusted contact should know about the scheme heard in the call
 SCHEME_HINTS = {
     "relative_in_trouble": "📞 Звонящий выдаёт себя за родственника в беде. Если это не вы и не ваши близкие — "

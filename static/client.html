@@ -34,6 +34,11 @@
     .side-note li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 6px;
       border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 11px; color: var(--text); font-family: "Geist Mono", monospace; }
     @media (max-width: 1100px) { .side-note { display: none; } }
+    /* iOS shows a call in progress as a green pill in place of the clock */
+    #callpill { position: absolute; left: 16px; top: 14px; z-index: 40; }
+    .call-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
+      border-radius: 99px; background: #1f9d55; color: #fff; font-size: 13px; font-weight: 600; }
+    .call-pill.hot { background: #d6402f; }
   </style>
 </head>
 <body>
@@ -42,18 +47,19 @@
     <aside class="side-note" aria-label="Подсказка ведущему">
       <div class="flex items-center gap-2 mb-5"><div class="app-icon sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div><span class="text-[13px] text-[color:var(--text)]">BCC Shield (демо) · экран клиента</span></div>
       <ol>
-        <li><span class="text-[color:var(--text)]">Защита звонка</span> → «Включить» → сценарий «служба безопасности» (или микрофон).</li>
-        <li>Риск растёт: жёлтый баннер, затем красный экран. Родственник получает тревогу.</li>
+        <li><span class="text-[color:var(--text)]">Звонок</span> → «Незнакомый номер · идёт 12 мин». Так телефон сообщает о звонке приложению банка — без микрофона.</li>
+        <li>Жёлтый баннер у Сауле, сыну в Telegram: «подозрительный звонок». «Открыт AnyDesk» → красный экран.</li>
         <li><span class="text-[color:var(--text)]">Кредит</span> → 1 500 000 ₸: деньги не выданы, заявка ушла Айдару.</li>
         <li><span class="text-[color:var(--text)]">Перевод</span> → шаблон «Kaspi •• 4417 · 2 000 000 ₸» — тоже на паузе.</li>
         <li>Во вкладке родственника нажмите «Отклонить». Так же защищены <span class="text-[color:var(--text)]">наличные</span> и <span class="text-[color:var(--text)]">закрытие депозита</span>.</li>
       </ol>
-      <p class="mt-6 text-[12px] faint">Контроль: сценарий «обычный звонок» и перевод сыну проходят без вмешательства.</p>
+      <p class="mt-6 text-[12px] faint">Контроль: «Звонит сын» и перевод сыну проходят без вмешательства. Проверка разговора на громкой связи — дополнительно, на том же экране.</p>
       <p class="mt-4 text-[12px]"><a class="link" href="/relative" target="_blank">Родственник ↗</a> &nbsp; <a class="link" href="/analyst" target="_blank">Аналитик ↗</a></p>
     </aside>
     <div class="phone" id="phone">
       <div class="phone-notch"></div>
       <div class="phone-status"><span class="num" id="clock">9:41</span><span class="flex items-center gap-1.5 text-[12px]"><span id="ws-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-[color:var(--faint)]"></span><span>LTE</span></span></div>
+      <div id="callpill"></div>
       <div class="phone-body" id="body"><div id="screen"></div></div>
       <div id="overlay"></div>
     </div>
