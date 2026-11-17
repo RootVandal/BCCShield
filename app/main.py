@@ -434,7 +434,7 @@ async def make_transfer(client_id: int, body: TransferIn, db: Session = Depends(
                      "scheme": {"ru": "приманка", "kk": "жем"}, "risk": 1.0, "level": "high", "call_id": None,
                      "at": datetime.now(), "relation": None, "source": "decoy", "app": c.remote_app,
                      "summary": {"ru": f"{tr['to']['bank']} {tr['to']['card']} · {int(tr['amount']):,} ₸".replace(",", " ")},
-                     "cards": res["cards_caught"]}
+                     "cards": res["cards_caught"], "fate": decoy.fate(to_acc)}
             relative_alerts.append(alert)
             await hub.broadcast("relative_alert", alert)
         return res

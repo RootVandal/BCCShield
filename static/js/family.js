@@ -36,22 +36,27 @@ function wardCard(w) {
   </div>`;
 }
 
+const I_SHIELD = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3 5 5.7v5.7c0 4.3 2.9 8 7 9.6 4.1-1.6 7-5.3 7-9.6V5.7L12 3Z"/><path d="m9 12 2.2 2.2L15.5 10" stroke-linecap="round"/></svg>`;
+const I_WARN = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>`;
+const I_PHONE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3l2 5-2 1a11 11 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg>`;
+const badge = (svg, color, bg) => `<div class="w-9 h-9 rounded-xl grid place-items-center flex-none" style="color:${color};background:${bg}">${svg}</div>`;
+
 function decoyCard(a) {
   return `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#0f2a1a,#0d1d14);border:1px solid rgba(47,210,122,.45)">
-    <div class="flex items-start gap-3"><div class="text-[22px] leading-none">🪤</div><div class="flex-1">
+    <div class="flex items-start gap-3">${badge(I_SHIELD, "var(--accent)", "rgba(47,210,122,.14)")}<div class="flex-1">
       <div class="text-[15px] font-semibold text-white leading-snug">Приманка: мошенник думает, что деньги ушли</div>
-      <div class="text-[13px] text-white/75 mt-1">На телефоне ${esc(firstName(a.client))} открыт ${esc(a.app || "удалённый доступ")}. Перевод на ${esc(a.summary?.ru || "")} показан как выполненный, но деньги на месте, карта заморожена${a.cards > 1 ? ` · поймано карт: ${a.cards}` : ""} · ${timeHM(a.at)}</div></div></div>
-    <a class="btn btn-block mt-3" style="background:#fff;color:#0d3b22;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить: пусть закроет ${esc(a.app || "AnyDesk")}</a></div>`;
+      <div class="text-[13px] text-white/75 mt-1">На телефоне ${esc(firstName(a.client))} открыт ${esc(a.app || "удалённый доступ")}. Перевод на ${esc(a.summary?.ru || "")} показан как выполненный, но деньги на месте. Карта: ${esc(a.fate || "передана в Антифрод-центр")}${a.cards > 1 ? ` · поймано карт: ${a.cards}` : ""} · ${timeHM(a.at)}</div></div></div>
+    <a class="btn btn-block mt-3 gap-2" style="background:#fff;color:#0d3b22;border:0;font-weight:600" href="tel:${esc(a.phone)}">${I_PHONE} Позвонить: пусть закроет ${esc(a.app || "AnyDesk")}</a></div>`;
 }
 
 function alertCards(w) {
   return w.alerts.slice().reverse().slice(0, 2).map((a) => a.source === "decoy" ? decoyCard(a) : `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#3a0f0a,#24100d);border:1px solid rgba(255,92,77,.45)">
-    <div class="flex items-start gap-3"><div class="text-[22px] leading-none">⚠️</div><div class="flex-1">
+    <div class="flex items-start gap-3">${badge(I_WARN, a.level === "medium" ? "var(--warn)" : "var(--danger)", a.level === "medium" ? "rgba(242,179,61,.14)" : "rgba(255,92,77,.14)")}<div class="flex-1">
       <div class="text-[15px] font-semibold text-white leading-snug">${esc(firstName(a.client))} ${a.level === "medium" ? "сейчас подозрительный звонок" : "сейчас звонят мошенники"}</div>
-      <div class="text-[13px] text-white/75 mt-1">${a.source === "telecom" ? `📡 Сообщил оператор связи («Телеком Антифрод») · ${timeHM(a.at)}`
-        : a.source === "phone" ? `📱 ${esc(a.summary?.ru || "")} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)} · ${timeHM(a.at)}`
+      <div class="text-[13px] text-white/75 mt-1">${a.source === "telecom" ? `Сообщил оператор связи («Телеком Антифрод») · ${timeHM(a.at)}`
+        : a.source === "phone" ? `${esc(a.summary?.ru || "")} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)} · ${timeHM(a.at)}`
         : `Схема: ${esc(a.scheme.ru)} · риск ${pct(F.calls?.[a.client_id]?.risk ?? a.risk)}${F.calls?.[a.client_id] ? " сейчас" : ""} · ${timeHM(a.at)}`}</div></div></div>
-    <a class="btn btn-block mt-3" style="background:#fff;color:#7a1109;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить</a></div>`).join("");
+    <a class="btn btn-block mt-3 gap-2" style="background:#fff;color:#7a1109;border:0;font-weight:600" href="tel:${esc(a.phone)}">${I_PHONE} Позвонить</a></div>`).join("");
 }
 
 function decisionRow(kind, id, rejectLabel = null) {

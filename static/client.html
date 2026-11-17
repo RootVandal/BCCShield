@@ -33,7 +33,32 @@
     .side-note li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 12px; }
     .side-note li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 6px;
       border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 11px; color: var(--text); font-family: "Geist Mono", monospace; }
-    @media (max-width: 1100px) { .side-note { display: none; } }
+    /* presenter's remote */
+    .demo-panel { width: 360px; flex: none; align-self: center; max-height: calc(100vh - 72px); overflow-y: auto; color: var(--muted);
+      background: rgba(18,18,17,.82); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
+    .dhead { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .dnow { margin: 14px 0 4px; padding: 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); min-height: 64px; }
+    .dlabel { font-family: "Geist Mono", ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+    .dnote { font-size: 12px; color: var(--faint); margin: -2px 0 8px; }
+    .dgroup { margin-top: 16px; }
+    .dstep { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; text-align: left;
+      border: 1px solid transparent; transition: background .15s, border-color .15s; color: var(--text); }
+    .dstep + .dstep { margin-top: 4px; }
+    .dstep:hover { background: var(--surface-2); border-color: var(--line); }
+    .dstep:disabled { opacity: .6; }
+    .dstep.active { background: rgba(47,210,122,.08); border-color: rgba(47,210,122,.35); }
+    .dnum { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex: none; font-size: 12px;
+      font-family: "Geist Mono", ui-monospace, monospace; border: 1px solid var(--line-strong); color: var(--muted); }
+    .dstep.done .dnum { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .dtitle { flex: 1; font-size: 13.5px; line-height: 1.3; }
+    .dgo { color: var(--faint); opacity: 0; transition: opacity .15s; } .dstep:hover .dgo { opacity: 1; }
+    .dfoot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .dmini { height: 30px; padding: 0 11px; border-radius: 9px; font-size: 12px; border: 1px solid var(--line-strong); color: var(--text); background: var(--surface-2); }
+    .dmini:hover { background: var(--surface-3); }
+    .dlinkbtn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .dlink { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--accent); }
+    .disclaimer { position: fixed; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 11px; color: var(--faint); z-index: 1; pointer-events: none; }
+    @media (max-width: 1100px) { .phone-stage { flex-wrap: wrap; align-content: flex-start; } .demo-panel { order: 2; width: 390px; max-height: none; } .disclaimer { position: static; padding: 8px 16px 16px; } }
     /* iOS shows a call in progress as a green pill in place of the clock */
     #callpill { position: absolute; left: 16px; top: 14px; z-index: 40; }
     .call-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
@@ -44,18 +69,7 @@
 <body>
   <canvas class="sand" id="sand" aria-hidden="true" style="opacity:.7"></canvas>
   <div class="phone-stage">
-    <aside class="side-note" aria-label="Подсказка ведущему">
-      <div class="flex items-center gap-2 mb-5"><div class="app-icon sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div><span class="text-[13px] text-[color:var(--text)]">BCC Shield (демо) · экран клиента</span></div>
-      <ol>
-        <li><span class="text-[color:var(--text)]">Звонок</span> → «Незнакомый номер · идёт 12 мин». Так телефон сообщает о звонке приложению банка — без микрофона.</li>
-        <li>Жёлтый баннер у Сауле, сыну в Telegram: «подозрительный звонок».</li>
-        <li><span class="text-[color:var(--text)]">Кредит</span> → 1 500 000 ₸ и <span class="text-[color:var(--text)]">Перевод</span> → «Kaspi •• 4417»: на паузе, решает Айдар («Отклонить» во вкладке родственника).</li>
-        <li><span class="text-[color:var(--text)]">Приманка:</span> «Открыт AnyDesk» — экран видит мошенник, поэтому на нём нет тревог. Перевод на Kaspi •• 4417, потом на вторую карту: мошенник видит «выполнено», деньги на месте, карты заморожены.</li>
-        <li>Выключите «Открыт AnyDesk» — Сауле видит правду: «Это была ловушка».</li>
-      </ol>
-      <p class="mt-6 text-[12px] faint">Контроль: «Звонит сын» и перевод сыну проходят без вмешательства. Проверка разговора на громкой связи — дополнительно, на том же экране.</p>
-      <p class="mt-4 text-[12px]"><a class="link" href="/relative" target="_blank">Родственник ↗</a> &nbsp; <a class="link" href="/analyst" target="_blank">Аналитик ↗</a></p>
-    </aside>
+    <aside class="demo-panel" id="demo-panel" aria-label="Пульт демо для ведущего"></aside>
     <div class="phone" id="phone">
       <div class="phone-notch"></div>
       <div class="phone-status"><span class="num" id="clock">9:41</span><span class="flex items-center gap-1.5 text-[12px]"><span id="ws-dot" class="inline-block w-1.5 h-1.5 rounded-full bg-[color:var(--faint)]"></span><span>LTE</span></span></div>
@@ -68,5 +82,7 @@
   <script src="/static/js/common.js"></script>
   <script src="/static/js/sand.js"></script>
   <script src="/static/js/client.js"></script>
+  <script src="/static/js/demo.js"></script>
+  <p class="disclaimer">Концепт для V ITU Hackathon 2026. Не является продуктом АО «Банк ЦентрКредит». Все клиенты и операции вымышлены.</p>
 </body>
 </html>

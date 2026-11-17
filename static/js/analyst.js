@@ -285,7 +285,7 @@ function onEvent(type, d) {
   if (type === "call_ended") { delete A.calls[d.call_id]; renderCalls(); }
   if (type === "antifraud_signal") loadJournal();
   if (type === "graph_updated") { clearTimeout(graphTimer); graphTimer = setTimeout(() => loadGraph(d.focus), 250); }
-  if (type === "decoy") toastA(`🪤 Приманка: ${esc(d.client)} «перевела» ${fmt(d.amount)} на ${esc(d.card)} под ${esc(d.app)}. Мошенник видит «успешно», деньги на месте, карта заморожена. Поймано карт: ${d.cards.length}.`);
+  if (type === "decoy") toastA(`<b>Приманка.</b> ${esc(d.client)} «перевела» ${fmt(d.amount)} на ${esc(d.card)} под ${esc(d.app)}. Мошенник видит «успешно», деньги на месте, номер карты — в Антифрод-центре. Поймано карт: ${d.cards.length}.`);
   if (type === "relative_alert" && d.source === "phone") toastA(`📱 ${esc(d.client)}: ${esc(d.summary?.ru || "")} · риск ${pct(d.risk)}. Доверенное лицо уведомлено ещё до перевода.`);
   else if (type === "relative_alert" && d.source !== "telecom" && d.source !== "decoy") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
 }

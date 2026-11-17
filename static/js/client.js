@@ -173,7 +173,7 @@ function shownBalance() {
 
 function showDecoyTruth(info) {
   vibrate([200, 100, 200]);
-  const cards = (info.cards || []).map((x) => `<li class="flex gap-2"><span style="color:var(--accent)">•</span><span>${esc(x)} — заморожена, передана в Антифрод-центр</span></li>`).join("");
+  const cards = (info.cards || []).map((x) => `<li class="flex gap-2"><span style="color:var(--accent)">•</span><span><span class="text-[color:var(--text)]">${esc(x.label || x)}</span> — ${esc(x.fate || "передана в Антифрод-центр")}</span></li>`).join("");
   overlay(`<div class="overlay px-6 pt-16 pb-8" style="background:#0d0d0c" role="alertdialog">
     <div class="w-14 h-14 rounded-2xl grid place-items-center" style="background:var(--accent-dim);color:var(--accent)">${SHIELD_SVG.replace("<svg", '<svg width="30" height="30"')}</div>
     <h2 class="text-[24px] leading-tight font-semibold mt-5">Это была ловушка для мошенника</h2>
@@ -250,7 +250,7 @@ function renderTransfer() {
       <button class="card-2 text-left px-3 py-2.5 text-[13px] flex justify-between items-center" onclick="tpl('medium')"><span>Halyk •• 7788 <span class="muted">· новая карта</span></span><span class="num">250 000 ₸</span></button>
     </div>
     <button class="btn btn-accent btn-lg btn-block mt-6" id="send-btn" onclick="submitTransfer()">${t("send")}</button>
-    <p class="text-[11.5px] faint text-center mt-3">${S.client.shield_enabled ? "🛡 " + t("shieldOnNote") : ""}</p>
+    <p class="text-[11.5px] faint text-center mt-3">${S.client.shield_enabled ? t("shieldOnNote") : ""}</p>
   </div>`;
 }
 
@@ -259,7 +259,7 @@ function renderLoan() {
   S.loanAmount ??= 1500000;
   return `${header(t("loanTitle"))}<div class="px-4 pb-8 fade-in">
     <p class="text-[13px] muted mb-5">${t("loanNote")}</p>
-    ${(S.client.protection_mode === "on" || S.call?.risk >= 0.5 || S.client.telecom_alert) && !armed() ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8">⚠️ ${t("loanWarn")}</div>` : ""}
+    ${(S.client.protection_mode === "on" || S.call?.risk >= 0.5 || S.client.telecom_alert) && !armed() ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8"><span class="flex gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="flex-none mt-px"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><span>${t("loanWarn")}</span></span></div>` : ""}
     <div class="card p-5 text-center"><div class="label">${t("amount")}</div>
       <div class="text-[34px] font-semibold num mt-1">${fmt(S.loanAmount)}</div>
       <div class="flex justify-center gap-1.5 mt-4">${presets.map((p) => `<button class="chip ${S.loanAmount === p ? "on" : ""}" onclick="S.loanAmount=${p};render()">${fmtShort(p)}</button>`).join("")}</div>
@@ -273,7 +273,7 @@ function renderLoan() {
 function dangerNote(key) {
   const c = S.client;
   return (c.protection_mode === "on" || S.call?.risk >= 0.5 || c.telecom_alert) && !armed()
-    ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8">⚠️ ${t(key)}</div>` : "";
+    ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8"><span class="flex gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="flex-none mt-px"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><span>${t(key)}</span></span></div>` : "";
 }
 
 function renderCash() {
@@ -287,7 +287,7 @@ function renderCash() {
       <div class="flex justify-center gap-1.5 mt-4">${presets.map((p) => `<button class="chip ${S.cashAmount === p ? "on" : ""}" onclick="S.cashAmount=${p};render()">${fmtShort(p)}</button>`).join("")}</div>
       <div class="text-[12px] muted mt-4">${t("balance")}: <span class="num">${fmt(S.client.balance)}</span></div></div>
     <button class="btn btn-accent btn-lg btn-block mt-5" onclick="submitTransfer({kind:'cash', amount:S.cashAmount, behavior:{fill_seconds:10}})">${t("cashGo")} ${fmt(S.cashAmount)}</button>
-    <p class="text-[11.5px] faint text-center mt-3">${S.client.shield_enabled ? "🛡 " + t("shieldOnNote") : ""}</p>
+    <p class="text-[11.5px] faint text-center mt-3">${S.client.shield_enabled ? t("shieldOnNote") : ""}</p>
   </div>`;
 }
 
@@ -323,23 +323,15 @@ function phoneCard() {
     <p class="text-[11.5px] faint mt-3 leading-snug">${t("phoneHow")}</p></div>`;
 }
 
-function demoPhoneControls() {
-  const remote = S.client.remote_app;
-  return `<div class="label mt-5 mb-2">${t("demoPhone")}</div>
-    <div class="grid grid-cols-2 gap-1.5">
-      <button class="chip justify-center" onclick="phoneCall({caller:'+7 701 ••• 45 67', caller_kind:'unknown', minutes_ago:12})">📞 ${t("demoUnknown")}</button>
-      <button class="chip justify-center" onclick="phoneCall({caller:'', caller_kind:'hidden', minutes_ago:3})">🕶 ${t("demoHidden")}</button>
-      <button class="chip justify-center" onclick="phoneCall({caller:'Айдар (сын)', caller_kind:'contact', minutes_ago:4})">👨 ${t("demoSon")}</button>
-      <button class="chip justify-center ${remote ? "on" : ""}" onclick="remoteApp(${remote ? "null" : "'AnyDesk'"})">🖥 ${t("demoRemote")}</button>
-    </div>
-    ${S.call ? `<button class="btn btn-danger btn-block mt-2" onclick="endCall('hangup')">📵 ${t("demoHang")}</button>` : ""}`;
+function hangupButton() {
+  return S.call ? `<button class="btn btn-danger btn-block mt-3" onclick="endCall('hangup')">${t("demoHang")}</button>` : "";
 }
 
 function renderCall() {
   const speaker = S.call && (S.call.speech_risk > 0 || S.speakerOpen);
   return `${header(t("callTile"))}<div class="px-4 pb-8 fade-in">
     ${phoneCard()}
-    ${demoPhoneControls()}
+    ${hangupButton()}
     <div class="card-2 p-4 mt-5">
       <div class="flex items-center gap-2">${ICONS.mic}<span class="text-[14px] font-semibold">${t("speakerTitle")}</span></div>
       <p class="text-[12px] muted mt-1.5 leading-snug">${t("speakerNote")}</p>
@@ -538,7 +530,7 @@ const byPhone = () => isPhone() && !(S.call.speech_risk >= 0.5) && S.call.phone?
 function showMediumBanner() {
   vibrate([200, 100, 200]);
   overlay(`<div class="absolute left-3 right-3 top-[54px] z-50 rounded-2xl p-4 shake" style="background:#2b2208;border:1px solid rgba(242,179,61,.45)" role="alert">
-    <div class="flex gap-3"><div class="text-[22px] leading-none">⚠️</div><div>
+    <div class="flex gap-3"><div style="color:var(--warn)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="flex-none mt-px"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.3A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.7L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div><div>
       <div class="text-[15px] font-semibold" style="color:var(--warn)">${t(byPhone() ? "phoneMediumTitle" : "mediumTitle")}</div>
       ${byPhone() ? `<div class="text-[12.5px] mt-1 text-[#f3e3bd]/80">${esc(S.lang === "kk" ? S.call.phone.summary.kk : S.call.phone.summary.ru)}</div>` : ""}
       <div class="text-[13px] mt-1 text-[#f3e3bd] leading-snug">${t(byPhone() ? "phoneMediumText" : "mediumText")}</div></div></div>
@@ -557,12 +549,12 @@ function showHighScreen() {
     <h2 class="text-[28px] leading-[1.1] font-semibold mt-6 text-white">${t(byPhone() ? "phoneHighTitle" : "highTitle")}</h2>
     <div class="mt-2 text-[13px] text-white/70">${t("risk")}: <b class="num text-white">${pct(S.call?.risk || 0)}</b>${byPhone() ? ` · ${esc(S.lang === "kk" ? S.call.phone.summary.kk : S.call.phone.summary.ru)}` : sch ? ` · ${t("scheme")}: ${esc(sch)}` : ""}</div>
     <ul class="mt-6 flex flex-col gap-3 text-[14.5px] text-white/90 leading-snug">
-      <li class="flex gap-2.5"><span>✋</span><span>${t("highL1")}</span></li>
-      <li class="flex gap-2.5"><span>🔒</span><span>${t("highL2")}</span></li>
-      <li class="flex gap-2.5"><span>🛡</span><span>${t("highL3")} ${esc(tc?.name || "")}${tc ? ` (${esc(tc.relation)})` : ""}.</span></li></ul>
+      <li class="flex gap-2.5"><span class="w-1.5 h-1.5 rounded-full bg-white/70 mt-2.5 flex-none"></span><span>${t("highL1")}</span></li>
+      <li class="flex gap-2.5"><span class="w-1.5 h-1.5 rounded-full bg-white/70 mt-2.5 flex-none"></span><span>${t("highL2")}</span></li>
+      <li class="flex gap-2.5"><span class="w-1.5 h-1.5 rounded-full bg-white/70 mt-2.5 flex-none"></span><span>${t("highL3")} ${esc(tc?.name || "")}${tc ? ` (${esc(tc.relation)})` : ""}.</span></li></ul>
     <div id="bank-check" class="mt-4"></div>
     <div class="mt-auto flex flex-col gap-2">
-      <button class="btn btn-lg btn-block" style="background:#fff;color:#7a1109;border:0;font-weight:600" onclick="endCall('hangup')">📵 ${t("hangup")}</button>
+      <button class="btn btn-lg btn-block" style="background:#fff;color:#7a1109;border:0;font-weight:600" onclick="endCall('hangup')">${t("hangup")}</button>
       <button class="btn btn-block" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)" onclick="checkBank('#bank-check')">${t("checkBank")}</button>
       <button class="text-[13px] text-white/60 mt-1" onclick="dismissAlert('high')">${t("close")}</button></div></div>`);
 }
@@ -587,7 +579,7 @@ function showQuestions(assessment, body) {
     <h3 class="text-[19px] font-semibold mt-3">${t("qTitle")}</h3>
     <p class="text-[13px] muted mt-1">${t("qText")}</p>
     <div class="mt-2">${q("on_call", t("q1"))}${q("safe_account", t(body.kind === "cash" ? "q2cash" : "q2"))}${q("impersonation", t("q3"))}</div>
-    <button class="btn btn-block mt-4" onclick="checkBank('#q-bank')">📞 ${t("checkBank")}</button><div id="q-bank" class="mt-2"></div>
+    <button class="btn btn-block mt-4" onclick="checkBank('#q-bank')">${t("checkBank")}</button><div id="q-bank" class="mt-2"></div>
     <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn" onclick="closeOverlay()">${t("cancel")}</button>
       <button class="btn btn-accent" onclick='submitTransfer(${JSON.stringify(body).replace(/'/g, "&#39;")}, true)'>${t("continue")}</button></div></div>`);
 }
@@ -779,7 +771,7 @@ async function endCall(outcome) {
   S.call = null;
   S.speakerOpen = false;
   closeOverlay();
-  if (outcome === "hangup") toast("📵 Звонок завершён. Если нужно — позвоните в банк по номеру на карте.", "neutral", 5000);
+  if (outcome === "hangup") toast("Звонок завершён. Если нужно — позвоните в банк по номеру на карте.", "neutral", 5000);
   render();
 }
 
@@ -885,7 +877,7 @@ function onEvent(type, d) {
     return;
   }
   if (type === "decoy_reveal" && d.client_id === CLIENT_ID) { refreshTransfers(); setTimeout(() => showDecoyTruth(d), 300); return; }
-  if (type === "client_warning" && d.client_id === CLIENT_ID) toast("⚠️ " + esc(S.lang === "kk" ? d.kk : d.ru), "danger", 9000);
+  if (type === "client_warning" && d.client_id === CLIENT_ID) toast(esc(S.lang === "kk" ? d.kk : d.ru), "danger", 9000);
   if (type === "loan" && d.client_id === CLIENT_ID && d.decided_by) {
     toast(d.status === "approved" ? `✅ Кредит ${fmt(d.amount)} зачислен${d.decided_by === "cooling_expired" ? " после охлаждения" : ""}` : `❌ Кредит ${fmt(d.amount)} отклонён доверенным лицом`, d.status === "approved" ? "neutral" : "danger", 6000);
   }

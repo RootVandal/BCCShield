@@ -5,7 +5,8 @@ himself. A «Перевод заблокирован» screen only tells him to 
 a remote-access app is open and the shield is on, a risky transfer *looks* sent and a loan *looks* credited, but:
 
 - no money leaves and no loan is issued;
-- the recipient card is frozen on the spot and reported to the Antifraud Centre;
+- the recipient is blocked on the spot: a BCC account is frozen, another bank's card is closed to transfers from BCC;
+  either way its number goes to the Antifraud Centre (the card number is the one the scammer dictated himself);
 - every next card he dictates («первый не дошёл, переведите сюда») is caught the same way;
 - the family hears about it at once, and the client sees the truth as soon as the remote access is closed.
 
@@ -52,7 +53,7 @@ async def catch_transfer(db: Session, client: Client, t: Transfer, dst: Account)
     await hub.broadcast("graph_updated", {"focus": dst.id, "reason": "decoy"})
     await hub.broadcast("decoy", {"client_id": client.id, "client": client.name, "card": f"{dst.bank} {dst.card_mask}",
                                   "amount": t.amount, "cards": caught, "app": client.remote_app})
-    await telegram_bot.notify_decoy(db, client, t.amount, f"{dst.bank} {dst.card_mask}", len(caught))
+    await telegram_bot.notify_decoy(db, client, t.amount, f"{dst.bank} {dst.card_mask}", len(caught), fate(dst))
     return len(caught)
 
 
@@ -67,16 +68,23 @@ def _source(db: Session, client: Client) -> Account:
     return db.query(Account).filter_by(client_id=client.id).first()
 
 
-def caught_cards(db: Session, client: Client) -> list[str]:
+def fate(dst: Account) -> str:
+    """What the bank can really do with the card: freeze its own, close transfers to another bank's and report it."""
+    return ("переводы из БЦК закрыты, номер передан в Антифрод-центр" if dst.is_external
+            else "счёт заморожен, номер передан в Антифрод-центр")
+
+
+def caught_cards(db: Session, client: Client) -> list[dict]:
     acc = _source(db, client)
     rows = db.query(Transfer).filter(Transfer.from_account_id == acc.id, Transfer.status == ACTIVE).all()
-    seen = []
+    seen, out = set(), []
     for t in rows:
         d = db.get(Account, t.to_account_id)
         label = f"{d.bank} {d.card_mask}"
         if label not in seen:
-            seen.append(label)
-    return seen
+            seen.add(label)
+            out.append({"label": label, "external": d.is_external, "fate": fate(d)})
+    return out
 
 
 def state(db: Session, client: Client) -> dict:
