@@ -22,7 +22,8 @@ class Settings:
     admin_key: str = os.getenv("ADMIN_KEY", "").strip()
     secret_key: str = os.getenv("SECRET_KEY", "").strip()
     # Public address of the demo (https://bcc.example.com): used in the links the Telegram bot sends.
-    public_url: str = os.getenv("PUBLIC_URL", "").strip().rstrip("/")
+    # On Render the address is known automatically (RENDER_EXTERNAL_URL), so the Mini App works without setup.
+    public_url: str = (os.getenv("PUBLIC_URL", "").strip() or os.getenv("RENDER_EXTERNAL_URL", "").strip()).rstrip("/")
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", "8000"))
 

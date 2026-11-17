@@ -1,0 +1,22 @@
+# Render Blueprint: https://render.com/deploy?repo=https://github.com/RootVandal/BCCShield
+# Builds the Dockerfile and runs the demo at https://<name>.onrender.com (https: the Telegram Mini App works there).
+services:
+  - type: web
+    name: bcc-shield
+    runtime: docker
+    plan: free            # free sleeps after 15 min without visits; for the final switch to "starter"
+    region: frankfurt     # the closest Render region to Kazakhstan
+    healthCheckPath: /api/config
+    envVars:
+      - key: ADMIN_KEY            # presenter / analyst key: Render generates it, see Environment in the dashboard
+        generateValue: true
+      - key: SECRET_KEY           # keeps trusted-contact links valid across restarts
+        generateValue: true
+      - key: COOLING_SECONDS
+        value: "300"
+      - key: BACKGROUND_ACTIVITY
+        value: "1"
+      - key: TELEGRAM_BOT_TOKEN   # optional; the same token must not run anywhere else at the same time
+        sync: false
+      - key: OPENAI_API_KEY       # optional: microphone + LLM analysis
+        sync: false

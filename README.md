@@ -265,6 +265,22 @@ python -m app
 На сервере задайте в `.env` свой `ADMIN_KEY` (или возьмите сгенерированный из лога: `docker compose logs | grep Ключ`)
 и `PUBLIC_URL`. Ведущему достаточно один раз открыть `https://домен/?key=ADMIN_KEY` в своём браузере.
 
+## Хостинг на Render (https за пару минут)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/RootVandal/BCCShield)
+
+1. Нажмите кнопку выше и войдите в Render через GitHub. Render прочитает `render.yaml`, соберёт `Dockerfile`
+   и запустит сервис `bcc-shield` в регионе Frankfurt.
+2. При создании он спросит необязательные `TELEGRAM_BOT_TOKEN` и `OPENAI_API_KEY` — можно оставить пустыми.
+3. Через 3–5 минут демо будет на `https://bcc-shield.onrender.com` (или похожем адресе). Адрес сам становится
+   `PUBLIC_URL`, поэтому кнопка «Семья» в боте (мини-приложение) работает без настройки.
+4. Ключ ведущего: Dashboard → сервис → Environment → `ADMIN_KEY`. Откройте один раз `https://адрес/?key=КЛЮЧ`.
+
+Особенности бесплатного плана: сервис засыпает после 15 минут без посещений, первое открытие после сна — около
+минуты, бот в это время не отвечает; диск не сохраняется, поэтому после перезапуска демо-данные создаются заново
+и Telegram у Айдара привязывается снова. Перед финалом переключите план на Starter (Settings → Instance Type)
+или откройте сайт за пару минут до выступления. Один токен бота — только в одном месте (Render или ваш компьютер).
+
 ## Стили (Tailwind)
 
 `static/css/tailwind.css` собран заранее (Tailwind 3.4.16, та же версия, что раньше бралась с CDN). Если добавили
