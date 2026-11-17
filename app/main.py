@@ -16,7 +16,7 @@ from app.call_guard import analyzer, scenarios, stt
 from app.call_guard import context as cctx
 from app.config import BASE_DIR, settings
 from app.db import SessionLocal, engine, get_db, upgrade_schema
-from app.family import contacts, service, telegram_bot
+from app.family import contacts, decoy, service, telegram_bot
 from app.family.linking import ensure_strong_codes, transfer_client
 from app.graph import scoring
 from app.graph import service as graph_service
@@ -426,8 +426,18 @@ async def make_transfer(client_id: int, body: TransferIn, db: Session = Depends(
     c = get_client(db, client_id)
     try:
         to_acc = find_or_create_recipient(db, body.bank, body.card, body.phone)
-        return await service.create_transfer(db, c, to_acc, body.amount, body.behavior,
-                                             body.answers.model_dump() if body.answers else None)
+        res = await service.create_transfer(db, c, to_acc, body.amount, body.behavior,
+                                            body.answers.model_dump() if body.answers else None)
+        if res["action"] == "decoy":  # the son's cabinet shows it next to the call alerts
+            tr = res["transfer"]
+            alert = {"id": len(relative_alerts) + 1, "client_id": c.id, "client": c.name, "phone": c.phone,
+                     "scheme": {"ru": "приманка", "kk": "жем"}, "risk": 1.0, "level": "high", "call_id": None,
+                     "at": datetime.now(), "relation": None, "source": "decoy", "app": c.remote_app,
+                     "summary": {"ru": f"{tr['to']['bank']} {tr['to']['card']} · {int(tr['amount']):,} ₸".replace(",", " ")},
+                     "cards": res["cards_caught"]}
+            relative_alerts.append(alert)
+            await hub.broadcast("relative_alert", alert)
+        return res
     except ValueError as e:
         db.rollback()
         bad_request(e)
@@ -676,11 +686,14 @@ async def remote_access(client_id: int, body: RemoteAppIn, db: Session = Depends
     c = get_client(db, client_id)
     c.remote_app = (body.app or "").strip() or None
     db.commit()
+    await service.push_client(db, c)  # the screen learns it is watched before any new alarm reaches it
     call = active_call(db, c.id)
     if call and call.source == "phone":
         await refresh_phone_call(db, call, force=True)
+    revealed = None if c.remote_app else await decoy.reveal(db, c)  # nobody else sees the screen: the truth
     await service.push_client(db, c)
-    return {"remote_app": c.remote_app}
+    await hub.broadcast("metrics", service.metrics(db))
+    return {"remote_app": c.remote_app, "revealed": revealed}
 
 
 @app.post("/api/calls/{call_id}/text")

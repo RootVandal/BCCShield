@@ -26,6 +26,7 @@ function renderMetrics(flash) {
     ["Остановлено операций", m.stopped ?? 0, "stopped"],
     ["На паузе сейчас", m.paused_now ?? 0, "paused", m.paused_now ? "var(--warn)" : null],
     ["Звонков с риском", m.risky_calls ?? 0, "calls", m.risky_calls ? "var(--danger)" : null],
+    ["Поймано приманкой", `${m.decoy_cards ?? 0} карт`, "decoy", m.decoy_cards ? "var(--accent)" : null],
     ["Найдено дропперов", m.droppers_found ?? 0, "drops"],
     ["Precision графа", (m.precision ?? 0).toFixed(2), "p"],
     ["Recall графа", (m.recall ?? 0).toFixed(2), "r"],
@@ -284,8 +285,9 @@ function onEvent(type, d) {
   if (type === "call_ended") { delete A.calls[d.call_id]; renderCalls(); }
   if (type === "antifraud_signal") loadJournal();
   if (type === "graph_updated") { clearTimeout(graphTimer); graphTimer = setTimeout(() => loadGraph(d.focus), 250); }
+  if (type === "decoy") toastA(`🪤 Приманка: ${esc(d.client)} «перевела» ${fmt(d.amount)} на ${esc(d.card)} под ${esc(d.app)}. Мошенник видит «успешно», деньги на месте, карта заморожена. Поймано карт: ${d.cards.length}.`);
   if (type === "relative_alert" && d.source === "phone") toastA(`📱 ${esc(d.client)}: ${esc(d.summary?.ru || "")} · риск ${pct(d.risk)}. Доверенное лицо уведомлено ещё до перевода.`);
-  else if (type === "relative_alert" && d.source !== "telecom") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
+  else if (type === "relative_alert" && d.source !== "telecom" && d.source !== "decoy") toastA(`⚠️ Звонок с риском ${pct(d.risk)}: ${esc(d.client)} · схема ${esc(d.scheme.ru)}. Доверенное лицо уведомлено.`);
 }
 
 async function init() {

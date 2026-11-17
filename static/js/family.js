@@ -36,8 +36,16 @@ function wardCard(w) {
   </div>`;
 }
 
+function decoyCard(a) {
+  return `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#0f2a1a,#0d1d14);border:1px solid rgba(47,210,122,.45)">
+    <div class="flex items-start gap-3"><div class="text-[22px] leading-none">🪤</div><div class="flex-1">
+      <div class="text-[15px] font-semibold text-white leading-snug">Приманка: мошенник думает, что деньги ушли</div>
+      <div class="text-[13px] text-white/75 mt-1">На телефоне ${esc(firstName(a.client))} открыт ${esc(a.app || "удалённый доступ")}. Перевод на ${esc(a.summary?.ru || "")} показан как выполненный, но деньги на месте, карта заморожена${a.cards > 1 ? ` · поймано карт: ${a.cards}` : ""} · ${timeHM(a.at)}</div></div></div>
+    <a class="btn btn-block mt-3" style="background:#fff;color:#0d3b22;border:0;font-weight:600" href="tel:${esc(a.phone)}">📞 Позвонить: пусть закроет ${esc(a.app || "AnyDesk")}</a></div>`;
+}
+
 function alertCards(w) {
-  return w.alerts.slice().reverse().slice(0, 2).map((a) => `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#3a0f0a,#24100d);border:1px solid rgba(255,92,77,.45)">
+  return w.alerts.slice().reverse().slice(0, 2).map((a) => a.source === "decoy" ? decoyCard(a) : `<div class="mt-3 rounded-[18px] p-4 fade-in" role="alert" style="background:linear-gradient(180deg,#3a0f0a,#24100d);border:1px solid rgba(255,92,77,.45)">
     <div class="flex items-start gap-3"><div class="text-[22px] leading-none">⚠️</div><div class="flex-1">
       <div class="text-[15px] font-semibold text-white leading-snug">${esc(firstName(a.client))} ${a.level === "medium" ? "сейчас подозрительный звонок" : "сейчас звонят мошенники"}</div>
       <div class="text-[13px] text-white/75 mt-1">${a.source === "telecom" ? `📡 Сообщил оператор связи («Телеком Антифрод») · ${timeHM(a.at)}`

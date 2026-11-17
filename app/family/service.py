@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.antifraud import mock_center
 from app.config import settings
-from app.family import contacts, telegram_bot
+from app.family import contacts, decoy, telegram_bot
 from app.graph import scoring
 from app.models import Account, CallSession, Client, Loan, Transfer, TrustedContact
 from app.risk import engine
@@ -69,6 +69,7 @@ def client_state(db: Session, client: Client) -> dict:
         "pending_loans": [serialize_loan(l) for l in pending_loans],
         "active_call_id": call.id if call else None,
         "remote_app": client.remote_app,
+        "decoy": decoy.state(db, client),
     }
 
 
@@ -119,6 +120,9 @@ async def take_loan(db: Session, client: Client, amount: float) -> Loan:
     status = "pending_relative" if people and (danger or family) else "cooling" if danger else "approved"
     loan = Loan(client_id=client.id, amount=amount, status=status, reasons=reasons,
                 cooling_until=datetime.now() + timedelta(seconds=settings.cooling_seconds) if status == "cooling" else None)
+    if decoy.active(client):  # the scammer sees «кредит зачислен», the bank issues nothing
+        decoy.catch_loan(client, loan)
+        loan.cooling_until = None
     if loan.status == "approved":
         client.balance += amount
     db.add(loan)
@@ -126,6 +130,10 @@ async def take_loan(db: Session, client: Client, amount: float) -> Loan:
     await hub.broadcast("loan", serialize_loan(loan))
     if loan.status == "pending_relative":
         await telegram_bot.notify_loan_request(db, client, loan)
+    elif loan.status == decoy.ACTIVE:
+        await telegram_bot.notify_decision(db, client, f"🪤 {client.name.split()[0]} оформляет кредит {telegram_bot.fmt(amount)}, "
+                                                       f"на телефоне открыт {client.remote_app}. Мошеннику показали «кредит "
+                                                       "зачислен», деньги не выданы.")
     await push_client(db, client)
     return loan
 
@@ -184,7 +192,9 @@ async def create_transfer(db: Session, client: Client, to_acc: Account, amount: 
         raise ValueError("Нельзя перевести на свой же счёт")
     ctx = engine.build_ctx(db, client, src, to_acc, amount, behavior, kind=kind)
     a = engine.evaluate(ctx)
-    if client.shield_enabled and a["level"] == "medium":
+    # a stranger watches the screen: no questions (he would answer them), the decoy takes over
+    staged = decoy.applies(client, kind, a["level"], to_acc)
+    if client.shield_enabled and a["level"] == "medium" and not staged:
         if answers is None:
             return {"action": "questions", "assessment": a}
         a = engine.escalate_with_answers(a, answers)
@@ -198,6 +208,18 @@ async def create_transfer(db: Session, client: Client, to_acc: Account, amount: 
     family = [] if kind == "deposit" else contacts.transfer_rules(people, amount, new_person)
     t = Transfer(from_account_id=src.id, to_account_id=to_acc.id, amount=amount, risk_score=a["score"],
                  risk_level=a["level"], reasons=a["reasons"] + family, context=a["context"], kind=kind)
+    if staged:
+        t.reasons = [decoy.reason(client)] + t.reasons
+        t.context = {**(t.context or {}), "decoy": True}
+        db.add(t)
+        db.commit()
+        caught = await decoy.catch_transfer(db, client, t, to_acc)
+        data = serialize_transfer(db, t)
+        await push_transfer(db, t)
+        await push_client(db, client)
+        # the screen (which the scammer is watching) gets an ordinary success; everything else gets the truth
+        return {"action": "decoy", "assessment": a, "transfer": data, "cards_caught": caught,
+                "shown": {**data, "status": "completed", "reasons": []}}
     if (to_acc.flags or {}).get("frozen"):
         t.status = "blocked"
     elif client.shield_enabled and (a["level"] == "high" or family):
@@ -306,7 +328,8 @@ async def fast_forward(db: Session) -> int:
 
 def metrics(db: Session) -> dict:
     live = db.query(Transfer).filter(Transfer.synthetic.is_(False)).all()
-    stopped = [t for t in live if t.status in ("rejected", "blocked") and not t.false_positive and t.kind != "deposit"]
+    stopped = [t for t in live if t.status in ("rejected", "blocked", decoy.ACTIVE, decoy.DONE)
+               and not t.false_positive and t.kind != "deposit"]
     paused_ever = [t for t in live if t.risk_level == "high" or t.status in PAUSED]
     false_pauses = [t for t in paused_ever if t.false_positive or (t.decided_by or "").startswith("relative")
                     and t.status == "completed"]
@@ -321,6 +344,7 @@ def metrics(db: Session) -> dict:
         "precision": g["precision"],
         "recall": g["recall"],
         "false_pause_rate": round(len(false_pauses) / len(paused_ever), 2) if paused_ever else 0,
+        "decoy_cards": len({t.to_account_id for t in live if t.status in (decoy.ACTIVE, decoy.DONE)}),
     }
 
 

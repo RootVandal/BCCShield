@@ -71,7 +71,7 @@ function ago(iso) {
 }
 
 const STATUS_RU = { completed: "Выполнен", pending_relative: "Ждёт родственника", cooling: "Охлаждение",
-  rejected: "Отклонён", blocked: "Заблокирован" };
+  rejected: "Отклонён", blocked: "Заблокирован", decoy: "Приманка: деньги на месте", decoy_done: "Приманка: не ушёл" };
 const LEVEL_RU = { low: "низкий", medium: "средний", high: "высокий" };
 const statusPill = (s) => `<span class="pill ${s}">${STATUS_RU[s] || s}</span>`;
 const levelPill = (l, score) => `<span class="pill ${l}">${LEVEL_RU[l] || l}${score !== undefined ? " · " + Math.round(score) : ""}</span>`;

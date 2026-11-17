@@ -159,7 +159,32 @@ function txRow(tx) {
     <div class="flex-1 min-w-0"><div class="text-[14px] truncate">${esc(name)}</div>
       <div class="text-[12px] muted">${esc(other.bank)} ${esc(other.card)} · ${dateShort(tx.created_at)} ${timeHM(tx.created_at)}</div></div>
     <div class="text-right"><div class="num text-[14px] ${out ? "" : "text-[color:var(--accent)]"}">${out ? "−" : "+"}${fmt(tx.amount)}</div>
-      ${tx.status !== "completed" ? statusPill(tx.status) : ""}</div></div>`;
+      ${tx.status !== "completed" && tx.status !== "decoy" ? statusPill(tx.status) : ""}</div></div>`;
+}
+
+// Decoy: while a stranger watches the screen (AnyDesk), it shows what he expects — the money "gone", the loan
+// "credited". The bank, the family and the analyst see the truth; the client sees it once remote access closes.
+const armed = () => !!S.client?.decoy?.armed;  // a stranger sees the screen: it shows no warnings, the family is warned
+
+function shownBalance() {
+  const c = S.client, d = c.decoy;
+  return d?.active ? c.balance - d.sent + d.loans : c.balance;
+}
+
+function showDecoyTruth(info) {
+  vibrate([200, 100, 200]);
+  const cards = (info.cards || []).map((x) => `<li class="flex gap-2"><span style="color:var(--accent)">•</span><span>${esc(x)} — заморожена, передана в Антифрод-центр</span></li>`).join("");
+  overlay(`<div class="overlay px-6 pt-16 pb-8" style="background:#0d0d0c" role="alertdialog">
+    <div class="w-14 h-14 rounded-2xl grid place-items-center" style="background:var(--accent-dim);color:var(--accent)">${SHIELD_SVG.replace("<svg", '<svg width="30" height="30"')}</div>
+    <h2 class="text-[24px] leading-tight font-semibold mt-5">Это была ловушка для мошенника</h2>
+    <p class="text-[14px] muted mt-2 leading-relaxed">Пока ваш экран видел посторонний, мы показывали ему то, чего он ждал. На самом деле ничего не ушло:</p>
+    <div class="card p-4 mt-5">
+      ${info.amount ? `<div class="flex justify-between text-[13.5px]"><span class="muted">Переводы</span><span class="num font-semibold" style="color:var(--accent)">${fmt(info.amount)} на месте</span></div>` : ""}
+      ${info.loans ? `<div class="flex justify-between text-[13.5px] mt-2"><span class="muted">Кредит</span><span class="num">${fmt(info.loans)} не оформлен</span></div>` : ""}
+      <div class="flex justify-between text-[13.5px] mt-2"><span class="muted">Баланс</span><span class="num font-semibold">${fmt(S.client.balance)}</span></div></div>
+    ${cards ? `<div class="label mt-5 mb-2">Карты мошенника</div><ul class="flex flex-col gap-1.5 text-[13px]">${cards}</ul>` : ""}
+    <p class="text-[12.5px] faint mt-5 leading-relaxed">Удалите ${esc(S.lastRemote || "AnyDesk")} и никому не давайте доступ к телефону. Банк никогда не просит его устанавливать.</p>
+    <div class="mt-auto pt-6"><button class="btn btn-accent btn-block btn-lg" onclick="closeOverlay();go('home')">Понятно</button></div></div>`);
 }
 
 function renderHome() {
@@ -172,14 +197,14 @@ function renderHome() {
         <div><div class="text-[12px] muted">${t("hello")},</div><div class="text-[15px] font-semibold">${esc(first)}</div></div></div>
       ${langToggle()}
     </div>
-    ${c.telecom_alert ? `<div class="w-full mb-2 px-3 py-2.5 rounded-xl text-[12.5px] flex gap-2 items-start" style="background:var(--danger-dim);color:#ffb1a8" role="alert">
+    ${c.telecom_alert && !armed() ? `<div class="w-full mb-2 px-3 py-2.5 rounded-xl text-[12.5px] flex gap-2 items-start" style="background:var(--danger-dim);color:#ffb1a8" role="alert">
       <span>📡</span><span>${t("telecom")}</span></div>` : ""}
-    ${c.protection_mode === "on" ? `<button onclick="go('settings')" class="w-full text-left mb-3 px-3 py-2.5 rounded-xl text-[12.5px] flex gap-2 items-start" style="background:var(--danger-dim);color:#ffb1a8">
+    ${c.protection_mode === "on" && !armed() ? `<button onclick="go('settings')" class="w-full text-left mb-3 px-3 py-2.5 rounded-xl text-[12.5px] flex gap-2 items-start" style="background:var(--danger-dim);color:#ffb1a8">
       <span class="mt-0.5">${ICONS.shield.replace("<svg", '<svg width="14" height="14"')}</span><span>${t("protectionOn")}: ${esc(contactNames() || "—")}</span></button>` : ""}
     <div class="bank-card">
       <div class="relative z-[1] flex justify-between items-start"><span class="text-[12px] text-white/70">${t("balance")}</span>
         <span class="text-[11px] text-white/60 mono">BCC Shield</span></div>
-      <div class="relative z-[1] mt-2 text-[30px] font-semibold num tracking-tight">${fmt(c.balance)}</div>
+      <div class="relative z-[1] mt-2 text-[30px] font-semibold num tracking-tight">${fmt(shownBalance())}</div>
       ${c.frozen > 0 ? `<div class="relative z-[1] text-[12px] mt-0.5" style="color:#ffd58a">${fmt(c.frozen)} ${t("frozen")}</div>` : ""}
       ${c.deposit > 0 ? `<div class="relative z-[1] text-[12px] mt-0.5 text-white/65">${t("deposit")}: <span class="num">${fmt(c.deposit)}</span></div>` : ""}
       <div class="absolute z-[1] bottom-4 left-[18px] right-[18px] flex justify-between items-end text-[12.5px] text-white/80">
@@ -234,7 +259,7 @@ function renderLoan() {
   S.loanAmount ??= 1500000;
   return `${header(t("loanTitle"))}<div class="px-4 pb-8 fade-in">
     <p class="text-[13px] muted mb-5">${t("loanNote")}</p>
-    ${S.client.protection_mode === "on" || S.call?.risk >= 0.5 || S.client.telecom_alert ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8">⚠️ ${t("loanWarn")}</div>` : ""}
+    ${(S.client.protection_mode === "on" || S.call?.risk >= 0.5 || S.client.telecom_alert) && !armed() ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8">⚠️ ${t("loanWarn")}</div>` : ""}
     <div class="card p-5 text-center"><div class="label">${t("amount")}</div>
       <div class="text-[34px] font-semibold num mt-1">${fmt(S.loanAmount)}</div>
       <div class="flex justify-center gap-1.5 mt-4">${presets.map((p) => `<button class="chip ${S.loanAmount === p ? "on" : ""}" onclick="S.loanAmount=${p};render()">${fmtShort(p)}</button>`).join("")}</div>
@@ -247,7 +272,7 @@ function renderLoan() {
 
 function dangerNote(key) {
   const c = S.client;
-  return c.protection_mode === "on" || S.call?.risk >= 0.5 || c.telecom_alert
+  return (c.protection_mode === "on" || S.call?.risk >= 0.5 || c.telecom_alert) && !armed()
     ? `<div class="mb-4 px-3 py-2.5 rounded-xl text-[12.5px]" style="background:var(--danger-dim);color:#ffb1a8">⚠️ ${t(key)}</div>` : "";
 }
 
@@ -344,7 +369,7 @@ function updatePill() {
   $("#clock").style.visibility = isPhone() ? "hidden" : "";
   if (!isPhone()) { el.innerHTML = ""; return; }
   const p = S.call.phone;
-  const hot = S.call.level !== "low";
+  const hot = S.call.level !== "low" && !armed();
   el.innerHTML = `<button class="call-pill ${hot ? "hot" : ""}" onclick="go('call')" aria-label="${esc(callerName(p))}">${ICONS.call.replace("<svg", '<svg width="12" height="12"')}<span class="num">${mmss(p.started_at)}</span></button>`;
 }
 setInterval(() => { updatePill(); document.querySelectorAll("[data-since]").forEach((e) => (e.textContent = mmss(e.dataset.since))); }, 1000);
@@ -677,7 +702,8 @@ async function submitTransfer(prev, answered = false) {
     const r = await api(`/api/clients/${CLIENT_ID}/${body.kind ? "operations" : "transfers"}`, { body });
     if (r.action === "questions") return showQuestions(r.assessment, body);
     if (!body.kind) S.form = { mode: "card", bank: "Kaspi", card: "", phone: "", amount: "", pasted: false, openedAt: Date.now() };
-    if (r.action === "completed") showDone(r.transfer);
+    if (r.action === "decoy") showDone(r.shown);       // the stranger watching the screen sees an ordinary success
+    else if (r.action === "completed") showDone(r.transfer);
     else if (r.action === "blocked") showResult("bad", t("blockedTitle"), t("blockedText"), r.transfer.amount);
     else showPaused(r.transfer);
   } catch (e) {
@@ -693,7 +719,8 @@ async function takeLoan(btn) {
   try {
     const loan = await api(`/api/clients/${CLIENT_ID}/loans`, { body: { amount: S.loanAmount } });
     const why = (loan.reasons || []).map((r) => `• ${esc(reasonText(r))}`).join("<br>");
-    if (loan.status === "pending_relative") showResult("safe", t("loanSent"), `${esc(contactNames())}. Деньги поступят после одобрения.${why ? "<br><br>" + why : ""}`, S.loanAmount);
+    if (loan.status === "decoy") showResult("ok", t("loanDone"), t("loanNote"), S.loanAmount);
+    else if (loan.status === "pending_relative") showResult("safe", t("loanSent"), `${esc(contactNames())}. Деньги поступят после одобрения.${why ? "<br><br>" + why : ""}`, S.loanAmount);
     else if (loan.status === "cooling") showResult("safe", t("loanCooling"), `${t("loanCoolingText")}${why ? "<br><br>" + why : ""}`, S.loanAmount);
     else showResult("ok", t("loanDone"), t("loanNote"), S.loanAmount);
   } catch (e) { toast(esc(e.message), "danger"); }
@@ -728,6 +755,7 @@ async function phoneCall(body) {
 }
 
 async function remoteApp(app) {
+  if (app) S.lastRemote = app;
   await api(`/api/clients/${CLIENT_ID}/remote-access`, { body: { app } });
 }
 
@@ -814,6 +842,8 @@ function onEvent(type, d) {
   if (type === "client_state" && d.id === CLIENT_ID) {
     const wasLang = S.lang;
     S.client = d;
+    if (armed() && $("#overlay .danger-screen, #overlay .shake")) closeOverlay();  // hide alarms from the stranger
+    updatePill();
     if (["home", "settings", "loan", "cash", "deposit"].includes(S.screen)) render();
     else if (S.screen === "transfer") { readForm(); render(); }
     if (wasLang !== S.lang) render();
@@ -836,6 +866,7 @@ function onEvent(type, d) {
     if (S.screen === "call") { if (d.fragment && $("#gauge")) updateCallView(); else render(); } else if (S.screen === "home") render();
     updatePill();
     const dis = S.dismissed[c.id] || {};
+    if (armed()) return;  // the scammer is looking: no alarms on this screen
     if (d.level === "high" && !dis.high && !S.pending) showHighScreen();
     else if (d.level === "medium" && !dis.medium && !$("#overlay").innerHTML) showMediumBanner();
     return;
@@ -853,6 +884,7 @@ function onEvent(type, d) {
     }
     return;
   }
+  if (type === "decoy_reveal" && d.client_id === CLIENT_ID) { refreshTransfers(); setTimeout(() => showDecoyTruth(d), 300); return; }
   if (type === "client_warning" && d.client_id === CLIENT_ID) toast("⚠️ " + esc(S.lang === "kk" ? d.kk : d.ru), "danger", 9000);
   if (type === "loan" && d.client_id === CLIENT_ID && d.decided_by) {
     toast(d.status === "approved" ? `✅ Кредит ${fmt(d.amount)} зачислен${d.decided_by === "cooling_expired" ? " после охлаждения" : ""}` : `❌ Кредит ${fmt(d.amount)} отклонён доверенным лицом`, d.status === "approved" ? "neutral" : "danger", 6000);

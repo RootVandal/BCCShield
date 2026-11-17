@@ -267,6 +267,17 @@ async def notify_call_alert(db, client, scheme_ru: str):
                                     "текущее значение в семейном кабинете.", with_app=True)
 
 
+async def notify_decoy(db, client, amount: float, card: str, caught: int):
+    first = client.name.split()[0]
+    more = f" Это уже {caught}-я карта мошенника за звонок." if caught > 1 else ""
+    await _broadcast(db, client.id,
+                     f"🪤 На телефоне {first} открыт {client.remote_app} — экран видит посторонний.\n"
+                     f"{first} переводит {fmt(amount)} на {card}. Мошеннику мы показали «перевод выполнен», "
+                     f"но деньги на месте, карта заморожена и передана в Антифрод-центр.{more}\n\n"
+                     f"Позвоните ({client.phone}) и попросите закрыть {client.remote_app}: тогда на экране будет правда.",
+                     with_app=True)
+
+
 async def notify_call_context(db, client, summary_ru: str, level: str):
     """A phone call the bank app noticed (CallKit / Android), without audio: the family hears of it before any
     transfer — this is what Kaspi's trusted contact cannot do."""
