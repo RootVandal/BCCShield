@@ -109,7 +109,7 @@ def page(name: str):
 
 
 for route, file in {"/": "index.html", "/client": "client.html", "/relative": "relative.html",
-                    "/analyst": "analyst.html", "/tg": "tg.html"}.items():
+                    "/analyst": "analyst.html", "/tg": "tg.html", "/video": "video.html"}.items():
     app.get(route, include_in_schema=False)(page(file))
 
 

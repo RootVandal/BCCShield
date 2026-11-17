@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Видео · BCC Shield</title>
+  <meta name="description" content="BCC Shield — семейная защита пенсионеров от телефонных мошенников. Видео о проекте, 4 минуты.">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/css/fonts.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/tailwind.css">
+  <style>
+    .wrap { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; gap: 22px; }
+    .frame { width: min(1120px, 100%); border-radius: 22px; overflow: hidden; border: 1px solid var(--line-strong);
+      box-shadow: 0 40px 120px rgba(0,0,0,.7), 0 0 120px rgba(47,210,122,.08); background: #000; }
+    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+    .row { width: min(1120px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .eyebrow { font-family: "Geist Mono", monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+    .links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .links a { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface-2);
+      display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--text); }
+    .links a:hover { background: var(--surface-3); }
+    .links a.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <canvas class="sand" id="sand" aria-hidden="true" style="opacity:.6"></canvas>
+  <main class="wrap">
+    <div class="row">
+      <div class="flex items-center gap-3">
+        <div class="app-icon sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.3v6.1c0 4.6 3.1 8.6 7.5 10.1 4.4-1.5 7.5-5.5 7.5-10.1V5.3L12 2.5Z" fill="#1c1c1a"/><path d="M12 5.2v14.1c3.1-1.3 5.1-4.4 5.1-7.9V7.1L12 5.2Z" fill="#2fd27a"/></svg></div>
+        <div><div class="eyebrow">Видео о проекте · 4 мин</div>
+          <h1 class="text-[22px] font-semibold leading-tight mt-1">BCC Shield — семейная защита от телефонных мошенников</h1></div>
+      </div>
+    </div>
+    <div class="frame">
+      <video controls preload="metadata" playsinline poster="/static/video/poster.jpg">
+        <source src="/static/video/BCC_Shield_promo.mp4" type="video/mp4">
+        Ваш браузер не показывает видео. <a href="/static/video/BCC_Shield_promo.mp4">Скачать MP4</a>.
+      </video>
+    </div>
+    <div class="row">
+      <div class="links">
+        <a class="primary" href="/client?c=1">Открыть демо</a>
+        <a href="/pitch">Презентация</a>
+        <a href="https://github.com/RootVandal/BCCShield" target="_blank" rel="noopener">GitHub</a>
+        <a href="/static/video/BCC_Shield_promo.mp4" download>Скачать MP4</a>
+      </div>
+      <p class="text-[11.5px] faint max-w-[420px]">Команда «Anthropic» · V ITU Hackathon 2026. Концепт, не продукт АО «Банк ЦентрКредит»; клиенты и операции вымышлены.</p>
+    </div>
+  </main>
+  <script src="/static/js/sand.js"></script>
+  <script>startSand(document.getElementById("sand"), { density: 0.7, alpha: 0.7 });</script>
+</body>
+</html>
