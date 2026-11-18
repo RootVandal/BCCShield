@@ -6,7 +6,7 @@
 > Это демо, а не продукт АО «Банк ЦентрКредит». Все клиенты, карты и операции вымышлены.
 
 - **Демо:** https://bcc-shield.onrender.com (бесплатный хостинг засыпает: первое открытие — до минуты)
-- **Видео (4 мин):** https://bcc-shield.onrender.com/video
+- **Видео (3 мин):** https://bcc-shield.onrender.com/video
 - **Презентация:** https://bcc-shield.onrender.com/pitch · [PDF](https://bcc-shield.onrender.com/static/pitch/BCC_Shield_pitch.pdf)
 - **Бот семьи:** [@BCCshieldbot](https://t.me/BCCshieldbot)
 
